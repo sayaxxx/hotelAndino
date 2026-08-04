@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -89,9 +90,61 @@ function nextId(rows, field) {
 }
 
 // ------------------------------------------------------------------
+// Autenticación y sesiones
+// ------------------------------------------------------------------
+const sessions = new Map(); // token -> { usuario, nombre, rol }
+
+function obtenerToken(req) {
+  return (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+}
+
+function requireAuth(req, res, next) {
+  const sesion = sessions.get(obtenerToken(req));
+  if (!sesion) {
+    return res.status(401).json({ error: 'No autorizado. Inicie sesión.' });
+  }
+  req.usuario = sesion;
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  if (req.usuario.rol !== 'admin') {
+    return res.status(403).json({ error: 'Acción reservada para administradores.' });
+  }
+  next();
+}
+
+// ------------------------------------------------------------------
+// API: Autenticación
+// ------------------------------------------------------------------
+app.post('/api/login', (req, res) => {
+  const { usuario, password } = req.body || {};
+  const u = readCsv('usuarios.csv').find(
+    (x) => x.usuario === usuario && x.password === password
+  );
+  if (!u) {
+    return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
+  }
+  const token = crypto.randomBytes(24).toString('hex');
+  sessions.set(token, { usuario: u.usuario, nombre: u.nombre, rol: u.rol });
+  res.json({ token, nombre: u.nombre, rol: u.rol });
+});
+
+app.post('/api/logout', (req, res) => {
+  sessions.delete(obtenerToken(req));
+  res.json({ ok: true });
+});
+
+app.get('/api/me', (req, res) => {
+  const sesion = sessions.get(obtenerToken(req));
+  if (!sesion) return res.json({ autenticado: false });
+  res.json({ autenticado: true, ...sesion });
+});
+
+// ------------------------------------------------------------------
 // API: Búsqueda de huésped por documento o número de reserva
 // ------------------------------------------------------------------
-app.get('/api/search', (req, res) => {
+app.get('/api/search', requireAuth, (req, res) => {
   const { tipo, valor } = req.query;
   if (!valor) {
     return res.status(400).json({ error: 'Debe indicar un valor de búsqueda.' });
@@ -151,7 +204,7 @@ app.get('/api/search', (req, res) => {
 // ------------------------------------------------------------------
 // API: Listar consumos del día de una reserva
 // ------------------------------------------------------------------
-app.get('/api/reservas/:id/consumos', (req, res) => {
+app.get('/api/reservas/:id/consumos', requireAuth, (req, res) => {
   const consumos = readCsv('consumos.csv');
   const delDia = consumos.filter(
     (c) => c.id_reserva === req.params.id && c.fecha === todayStr()
@@ -162,7 +215,7 @@ app.get('/api/reservas/:id/consumos', (req, res) => {
 // ------------------------------------------------------------------
 // API: Registrar un consumo (marcar comida reclamada)
 // ------------------------------------------------------------------
-app.post('/api/consumos', (req, res) => {
+app.post('/api/consumos', requireAuth, (req, res) => {
   const { id_reserva, servicio } = req.body;
 
   if (!id_reserva || !MEALS.includes(servicio)) {
@@ -203,6 +256,66 @@ app.post('/api/consumos', (req, res) => {
     consumos: consumos.filter(
       (c) => c.id_reserva === String(id_reserva) && c.fecha === todayStr()
     ),
+  });
+});
+
+// ------------------------------------------------------------------
+// API: Crear nueva reserva (solo administradores)
+// ------------------------------------------------------------------
+app.post('/api/reservas', requireAuth, requireAdmin, (req, res) => {
+  const {
+    nombre, documento, tipo_documento, telefono, email,
+    habitacion, fecha_checkin, fecha_checkout, comidas,
+  } = req.body || {};
+
+  if (!nombre || !documento || !habitacion || !fecha_checkin || !fecha_checkout) {
+    return res.status(400).json({ error: 'Complete los campos obligatorios (nombre, documento, habitación y fechas).' });
+  }
+  if (!Array.isArray(comidas) || comidas.length === 0) {
+    return res.status(400).json({ error: 'Seleccione al menos una comida del plan.' });
+  }
+  if (fecha_checkin > fecha_checkout) {
+    return res.status(400).json({ error: 'El check-in no puede ser posterior al check-out.' });
+  }
+
+  // Buscar huésped existente por documento; si no existe, crearlo
+  let huespedes = readCsv('huespedes.csv');
+  let esNuevoHuesped = false;
+  let huesped = huespedes.find((h) => h.documento === String(documento).trim());
+  if (!huesped) {
+    esNuevoHuesped = true;
+    huesped = {
+      id: String(nextId(huespedes, 'id')),
+      nombre: String(nombre).trim(),
+      documento: String(documento).trim(),
+      tipo_documento: (tipo_documento || 'CC').trim(),
+      telefono: String(telefono || '').trim(),
+      email: String(email || '').trim(),
+    };
+    huespedes.push(huesped);
+    writeCsv('huespedes.csv', huespedes);
+  }
+
+  const reservas = readCsv('reservas.csv');
+  const id_reserva = String(nextId(reservas, 'id_reserva'));
+  const nueva = {
+    id_reserva,
+    id_huesped: huesped.id,
+    habitacion: String(habitacion).trim(),
+    fecha_checkin,
+    fecha_checkout,
+    estado: 'Activa',
+    incluye_desayuno: comidas.includes('Desayuno') ? '1' : '0',
+    incluye_almuerzo: comidas.includes('Almuerzo') ? '1' : '0',
+    incluye_cena: comidas.includes('Cena') ? '1' : '0',
+  };
+  reservas.push(nueva);
+  writeCsv('reservas.csv', reservas);
+
+  res.status(201).json({
+    message: `Reserva ${id_reserva} creada para ${huesped.nombre}.`,
+    reserva: stripInternal(nueva),
+    esNuevoHuesped: esNuevoHuesped,
   });
 });
 

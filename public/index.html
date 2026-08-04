@@ -7,7 +7,23 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <div class="layout">
+  <!-- ============ PANTALLA DE LOGIN ============ -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <div class="login-logo">A</div>
+      <h1 class="login-title">Hotel Andino</h1>
+      <p class="login-sub">S.A.S. — Sistema de Gestión</p>
+      <form id="form-login" autocomplete="off">
+        <input type="text" id="login-usuario" placeholder="Usuario" />
+        <input type="password" id="login-password" placeholder="Contraseña" />
+        <button type="submit" class="btn btn-primary btn-block" id="btn-login">Ingresar</button>
+      </form>
+      <p id="login-error" class="login-error hidden"></p>
+      <p class="login-hint">Demo: admin/admin123 · mesero1/mesero123</p>
+    </div>
+  </div>
+
+  <div class="layout" id="app-shell">
     <!-- ============ SIDEBAR ============ -->
     <aside class="sidebar" id="sidebar">
       <div class="brand">
@@ -48,6 +64,14 @@
       </nav>
 
       <div class="sidebar-footer">
+        <div class="user-chip" id="user-chip">
+          <span class="user-chip-avatar" id="user-avatar">?</span>
+          <span class="user-chip-text">
+            <strong id="user-nombre">—</strong>
+            <em id="user-rol">—</em>
+          </span>
+        </div>
+        <button class="btn btn-logout" id="btn-logout">Cerrar sesión</button>
         <span id="sidebar-clock"></span>
       </div>
     </aside>
@@ -57,6 +81,9 @@
       <header class="topbar">
         <h1 id="page-title">Inicio</h1>
         <div class="topbar-right">
+          <button class="btn btn-secondary solo-admin hidden" id="btn-nueva-reserva">
+            <span class="btn-icon">&#43;</span> Nueva reserva
+          </button>
           <span id="today-date" class="today-date"></span>
         </div>
       </header>
@@ -130,6 +157,80 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- ============ MODAL: NUEVA RESERVA (solo admin) ============ -->
+  <div id="modal-reserva" class="modal hidden">
+    <div class="modal-backdrop" data-cerrar-modal></div>
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>Nueva reserva</h2>
+        <button type="button" class="modal-close" data-cerrar-modal aria-label="Cerrar">&times;</button>
+      </div>
+      <form id="form-reserva" autocomplete="off">
+        <fieldset>
+          <legend>Datos del huésped</legend>
+          <div class="form-grid">
+            <div class="field">
+              <label for="res-nombre">Nombre completo *</label>
+              <input id="res-nombre" type="text" placeholder="Nombre y apellido" required />
+            </div>
+            <div class="field">
+              <label for="res-documento">Documento *</label>
+              <input id="res-documento" type="text" placeholder="N° documento" required />
+            </div>
+            <div class="field">
+              <label for="res-tipo-doc">Tipo documento</label>
+              <select id="res-tipo-doc">
+                <option value="CC">CC</option>
+                <option value="CE">CE</option>
+                <option value="TI">TI</option>
+                <option value="Passport">Passport</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="res-telefono">Teléfono</label>
+              <input id="res-telefono" type="text" placeholder="Opcional" />
+            </div>
+            <div class="field">
+              <label for="res-email">Email</label>
+              <input id="res-email" type="email" placeholder="Opcional" />
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Datos de la reserva</legend>
+          <div class="form-grid">
+            <div class="field">
+              <label for="res-habitacion">Habitación *</label>
+              <input id="res-habitacion" type="text" placeholder="Ej: 204" required />
+            </div>
+            <div class="field">
+              <label for="res-fecha-in">Check-in *</label>
+              <input id="res-fecha-in" type="date" required />
+            </div>
+            <div class="field">
+              <label for="res-fecha-out">Check-out *</label>
+              <input id="res-fecha-out" type="date" required />
+            </div>
+            <div class="field field-checks">
+              <label>Comidas incluidas en el plan *</label>
+              <div class="checks">
+                <label class="check"><input type="checkbox" value="Desayuno" checked /> Desayuno</label>
+                <label class="check"><input type="checkbox" value="Almuerzo" checked /> Almuerzo</label>
+                <label class="check"><input type="checkbox" value="Cena" /> Cena</label>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" data-cerrar-modal>Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-crear-reserva">Crear reserva</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <div id="toast" class="toast hidden"></div>

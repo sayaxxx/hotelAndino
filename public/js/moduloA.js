@@ -225,14 +225,20 @@ const ModuloA = (() => {
     // Si ya hay un resultado visible, refrescarlo desde el servidor
     if (estadoActual && estadoActual.found) {
       const r = estadoActual.reserva;
-      const tipo = r.id_reserva ? 'reserva' : 'documento';
-      Api.buscar(tipo, r.id_reserva)
+      Api.buscar('reserva', r.id_reserva)
         .then((datos) => {
           estadoActual = datos;
           renderizar(datos);
         })
         .catch(() => {});
     }
+  }
+
+  // Búsqueda programática (usada por App al crear una reserva)
+  function buscarExterno(tipo, valor) {
+    document.getElementById('buscar-tipo').value = tipo;
+    document.getElementById('buscar-valor').value = valor;
+    buscar(new Event('submit'));
   }
 
   /* ---------- Utilidades ---------- */
@@ -246,7 +252,7 @@ const ModuloA = (() => {
       .replace(/'/g, '&#39;');
   }
 
-  return { init, refrescarVista };
+  return { init, refrescarVista, buscarExterno };
 })();
 
 document.addEventListener('DOMContentLoaded', ModuloA.init);

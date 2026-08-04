@@ -1,5 +1,5 @@
 /* ============================================================
-   App principal — navegación, reloj y utilidades comunes
+   App principal — sesión, roles, navegación y utilidades
    ============================================================ */
 
 const App = (() => {
@@ -10,6 +10,8 @@ const App = (() => {
     moduloC: 'Módulo C — Financiero y Reportes',
   };
 
+  let sesion = null;
+
   function init() {
     // Navegación por botones con data-view
     document.querySelectorAll('[data-view]').forEach((el) => {
@@ -19,10 +21,113 @@ const App = (() => {
       });
     });
 
+    // Login
+    document.getElementById('form-login').addEventListener('submit', iniciarSesion);
+
+    // Logout
+    document.getElementById('btn-logout').addEventListener('click', cerrarSesion);
+
+    // Modal nueva reserva (admin)
+    const btnNueva = document.getElementById('btn-nueva-reserva');
+    btnNueva.addEventListener('click', () => abrirModal('modal-reserva', true));
+    document.querySelectorAll('[data-cerrar-modal]').forEach((el) => {
+      el.addEventListener('click', () => abrirModal('modal-reserva', false));
+    });
+    document.getElementById('form-reserva').addEventListener('submit', crearReserva);
+
+    // Si la sesión expira, volver al login
+    document.addEventListener('andino:noauth', () => mostrarLogin());
+
     actualizarReloj();
     setInterval(actualizarReloj, 1000 * 30);
+
+    verificarSesion();
+  }
+
+  /* ---------- Sesión ---------- */
+
+  async function verificarSesion() {
+    try {
+      const datos = await Api.me();
+      if (datos.autenticado) {
+        sesion = datos;
+        mostrarApp();
+      } else {
+        mostrarLogin();
+      }
+    } catch {
+      mostrarLogin();
+    }
+  }
+
+  async function iniciarSesion(e) {
+    e.preventDefault();
+    const usuario = document.getElementById('login-usuario').value.trim();
+    const password = document.getElementById('login-password').value;
+    const btn = document.getElementById('btn-login');
+    const errEl = document.getElementById('login-error');
+
+    errEl.classList.add('hidden');
+    if (!usuario || !password) {
+      errEl.textContent = 'Ingrese usuario y contraseña.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Ingresando...';
+    try {
+      const datos = await Api.login(usuario, password);
+      Api.setToken(datos.token);
+      sesion = datos;
+      mostrarApp();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.remove('hidden');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  }
+
+  async function cerrarSesion() {
+    try { await Api.logout(); } catch { /* sin importar */ }
+    Api.setToken('');
+    sesion = null;
+    mostrarLogin();
+  }
+
+  function mostrarApp() {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app-shell').classList.remove('hidden');
+
+    // Info del usuario
+    document.getElementById('user-nombre').textContent = sesion.nombre;
+    document.getElementById('user-rol').textContent = sesion.rol === 'admin' ? 'Administrador' : 'Mesero';
+    document.getElementById('user-avatar').textContent = (sesion.nombre || '?').charAt(0).toUpperCase();
+
+    aplicarRol(sesion.rol);
     mostrarVista('inicio');
   }
+
+  function mostrarLogin() {
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('app-shell').classList.add('hidden');
+    document.getElementById('login-password').value = '';
+  }
+
+  function aplicarRol(rol) {
+    const esAdmin = rol === 'admin';
+    document.querySelectorAll('.solo-admin').forEach((el) => {
+      el.classList.toggle('hidden', !esAdmin);
+    });
+    if (!esAdmin) {
+      abrirModal('modal-reserva', false);
+    }
+  }
+
+  /* ---------- Navegación ---------- */
 
   function mostrarVista(nombre) {
     document.querySelectorAll('.view').forEach((v) => v.classList.add('hidden'));
@@ -38,6 +143,8 @@ const App = (() => {
 
     if (nombre === 'moduloA') ModuloA.refrescarVista();
   }
+
+  /* ---------- Reloj ---------- */
 
   function actualizarReloj() {
     const ahora = new Date();
@@ -55,6 +162,64 @@ const App = (() => {
       elFecha.textContent = primeraLetra + fecha.slice(1);
     }
     if (elReloj) elReloj.textContent = hora;
+  }
+
+  /* ---------- Modal ---------- */
+
+  function abrirModal(id, abrir) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.toggle('hidden', !abrir);
+    if (abrir) {
+      document.getElementById('res-fecha-in').value = hoyISO();
+      document.getElementById('res-fecha-out').value = hoyISO();
+    }
+  }
+
+  /* ---------- Nueva reserva (admin) ---------- */
+
+  async function crearReserva(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-crear-reserva');
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Creando...';
+
+    const comidas = Array.from(
+      document.querySelectorAll('#form-reserva input[type="checkbox"]:checked')
+    ).map((c) => c.value);
+
+    const datos = {
+      nombre: document.getElementById('res-nombre').value.trim(),
+      documento: document.getElementById('res-documento').value.trim(),
+      tipo_documento: document.getElementById('res-tipo-doc').value,
+      telefono: document.getElementById('res-telefono').value.trim(),
+      email: document.getElementById('res-email').value.trim(),
+      habitacion: document.getElementById('res-habitacion').value.trim(),
+      fecha_checkin: document.getElementById('res-fecha-in').value,
+      fecha_checkout: document.getElementById('res-fecha-out').value,
+      comidas,
+    };
+
+    try {
+      const resp = await Api.crearReserva(datos);
+      App.mostrarToast(resp.message, 'success');
+      abrirModal('modal-reserva', false);
+      document.getElementById('form-reserva').reset();
+
+      // Ir al Módulo A y mostrar la reserva recién creada
+      mostrarVista('moduloA');
+      ModuloA.buscarExterno('reserva', resp.reserva.id_reserva);
+    } catch (err) {
+      App.mostrarToast(err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }
+  }
+
+  function hoyISO() {
+    return new Date().toISOString().slice(0, 10);
   }
 
   function mostrarToast(mensaje, tipo = 'info') {
