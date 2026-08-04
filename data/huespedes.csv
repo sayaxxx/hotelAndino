@@ -1,0 +1,7 @@
+id,nombre,documento,tipo_documento,telefono,email
+1,Carlos Ramírez Gutiérrez,1023456789,CC,3001234567,carlos.ramirez@gmail.com
+2,María Fernanda López,1035678901,CC,3012345678,maria.lopez@outlook.com
+3,John Smith,98765432,Passport,3112345678,john.smith@example.com
+4,Ana Sofía Torres,1045678903,CC,3123456789,ana.torres@yahoo.com
+5,Diego Fernando Mora,52098765,TI,3134567890,diego.mora@gmail.com
+6,Luisa Fernanda Pineda,1012345678,CC,3145678901,luisa.pineda@gmail.com

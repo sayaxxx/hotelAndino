@@ -1,0 +1,530 @@
+/* ============================================================
+   Hotel Andino S.A.S. — Estilos generales
+   Paleta: verde andino profundo + dorado + neutros cálidos
+   ============================================================ */
+
+:root {
+  --verde-900: #0e3b2e;
+  --verde-800: #124b3a;
+  --verde-700: #17604a;
+  --verde-100: #e7f2ec;
+  --dorado: #c9a45c;
+  --dorado-suave: #e8d6ae;
+  --fondo: #f4f6f5;
+  --texto: #22302b;
+  --texto-suave: #64736c;
+  --blanco: #ffffff;
+  --rojo: #c0392b;
+  --verde-exito: #1e8449;
+  --gris-borde: #dde5e1;
+  --sombra: 0 6px 18px rgba(14, 59, 46, 0.08);
+  --radio: 12px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+  font-size: 15px;
+}
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* =========================== SIDEBAR =========================== */
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, var(--verde-900) 0%, var(--verde-800) 100%);
+  color: var(--blanco);
+  display: flex;
+  flex-direction: column;
+  padding: 22px 16px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  margin-bottom: 18px;
+}
+
+.brand-logo {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: var(--dorado);
+  color: var(--verde-900);
+  font-weight: 800;
+  font-size: 24px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+.brand-name {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.brand-sub {
+  font-size: 13px;
+  color: var(--dorado-suave);
+  display: block;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.nav-section {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 14px 10px 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 11px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, transform 0.05s ease;
+  font-family: inherit;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nav-item.active {
+  background: var(--dorado);
+  color: var(--verde-900);
+  font-weight: 600;
+}
+
+.nav-icon {
+  font-size: 12px;
+  width: 16px;
+  text-align: center;
+  opacity: 0.8;
+}
+
+.nav-label {
+  flex: 1;
+}
+
+.nav-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  padding: 2px 7px;
+}
+
+.nav-item.active .nav-badge {
+  background: rgba(14, 59, 46, 0.18);
+}
+
+.sidebar-footer {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 12px 8px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  text-align: center;
+}
+
+/* =========================== MAIN =========================== */
+.main {
+  flex: 1;
+  padding: 26px 34px 40px;
+  overflow-x: auto;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.topbar h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--verde-900);
+}
+
+.today-date {
+  font-size: 14px;
+  color: var(--texto-suave);
+  background: var(--blanco);
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--gris-borde);
+}
+
+.view {
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* =========================== CARDS =========================== */
+.card {
+  background: var(--blanco);
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 22px;
+  margin-bottom: 20px;
+}
+
+.card-title {
+  font-size: 17px;
+  color: var(--verde-800);
+  margin-bottom: 14px;
+}
+
+.card-module {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card-module h3 {
+  font-size: 17px;
+  color: var(--verde-800);
+}
+
+.card-module p {
+  color: var(--texto-suave);
+  line-height: 1.5;
+  flex: 1;
+}
+
+.card-module-tag {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 12px;
+}
+
+.tag-a { background: var(--verde-100); color: var(--verde-800); }
+.tag-b { background: #f3e9d3; color: #8a6a1f; }
+.tag-c { background: #e6edf7; color: #2f5d9e; }
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+/* =========================== FORMULARIO =========================== */
+.search-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-select { min-width: 190px; flex: 1; max-width: 230px; }
+.field-input { flex: 1.6; min-width: 220px; max-width: 320px; }
+
+.field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+.field input,
+.field select {
+  padding: 10px 12px;
+  border: 1px solid var(--gris-borde);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--blanco);
+  color: var(--texto);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field input:focus,
+.field select:focus {
+  outline: none;
+  border-color: var(--verde-700);
+  box-shadow: 0 0 0 3px rgba(23, 96, 74, 0.12);
+}
+
+/* =========================== BOTONES =========================== */
+.btn {
+  border: none;
+  border-radius: 10px;
+  padding: 11px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.05s ease, filter 0.15s ease;
+}
+
+.btn:active { transform: translateY(1px); }
+
+.btn-primary {
+  background: var(--verde-800);
+  color: var(--blanco);
+}
+
+.btn-primary:hover { filter: brightness(1.1); }
+
+.btn-secondary {
+  background: var(--verde-100);
+  color: var(--verde-800);
+}
+
+.btn-secondary:hover { filter: brightness(0.97); }
+
+.btn-claim {
+  background: var(--dorado);
+  color: var(--verde-900);
+  width: 100%;
+}
+
+.btn-claim:hover { filter: brightness(1.06); }
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-icon { margin-right: 6px; }
+
+/* =========================== RESULTADO MÓDULO A =========================== */
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.result-card h3 {
+  font-size: 15px;
+  color: var(--texto-suave);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 12px;
+}
+
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--gris-borde);
+  gap: 12px;
+}
+
+.data-row:last-child { border-bottom: none; }
+
+.data-label { color: var(--texto-suave); font-size: 13px; }
+.data-value { font-weight: 600; color: var(--texto); text-align: right; }
+
+.badge {
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 11px;
+}
+
+.badge-ok { background: var(--verde-100); color: var(--verde-exito); }
+.badge-no { background: #f9e2e0; color: var(--rojo); }
+
+/* Tarjetas de plan de comidas */
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.meal-card {
+  border: 1px solid var(--gris-borde);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  background: #fcfdfc;
+}
+
+.meal-icon { font-size: 28px; }
+
+.meal-name {
+  font-weight: 700;
+  margin: 8px 0 4px;
+  font-size: 15px;
+}
+
+.meal-status {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.meal-status.incluida { color: var(--verde-exito); }
+.meal-status.no-incluida { color: var(--rojo); }
+
+.meal-card.claimed {
+  border-color: var(--verde-exito);
+  background: var(--verde-100);
+}
+
+.meal-claim-info {
+  font-size: 12px;
+  color: var(--verde-exito);
+  font-weight: 600;
+}
+
+/* Tabla de consumos */
+.table-wrap {
+  overflow-x: auto;
+  margin-top: 4px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th, td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--gris-borde);
+}
+
+th {
+  background: var(--verde-100);
+  color: var(--verde-800);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+tbody tr:hover { background: #fafbfa; }
+
+/* =========================== MENSAJES =========================== */
+.alert {
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-weight: 500;
+  margin-bottom: 18px;
+}
+
+.alert-info  { background: var(--verde-100); color: var(--verde-800); border: 1px solid #bcddcc; }
+.alert-error { background: #f9e2e0; color: var(--rojo); border: 1px solid #eec4bf; }
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: var(--blanco);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* =========================== PLACEHOLDER MÓDULOS B/C =========================== */
+.placeholder {
+  text-align: center;
+  padding: 60px 30px;
+}
+
+.placeholder-icon {
+  font-size: 52px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.placeholder h2 {
+  color: var(--verde-800);
+  margin-bottom: 8px;
+}
+
+.placeholder p { color: var(--texto-suave); }
+
+/* =========================== TOAST =========================== */
+.toast {
+  position: fixed;
+  bottom: 26px;
+  right: 26px;
+  background: var(--verde-900);
+  color: var(--blanco);
+  padding: 14px 20px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  font-size: 14px;
+  max-width: 380px;
+  z-index: 1000;
+  animation: slideUp 0.25s ease;
+}
+
+.toast.error {
+  background: var(--rojo);
+}
+
+.toast.success {
+  background: var(--verde-exito);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* =========================== RESPONSIVE =========================== */
+@media (max-width: 900px) {
+  .sidebar { width: 220px; }
+  .main { padding: 20px; }
+  .search-form { flex-direction: column; align-items: stretch; }
+  .field-select, .field-input { max-width: none; }
+}

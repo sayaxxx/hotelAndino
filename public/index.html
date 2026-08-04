@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hotel Andino S.A.S. — Sistema de Gestión</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-logo">A</div>
+        <div class="brand-text">
+          <span class="brand-name">Hotel Andino</span>
+          <span class="brand-sub">S.A.S.</span>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <span class="nav-section">Menú principal</span>
+
+        <button class="nav-item" data-view="inicio">
+          <span class="nav-icon">&#9632;</span>
+          <span class="nav-label">Inicio</span>
+        </button>
+
+        <span class="nav-section">Operaciones</span>
+
+        <button class="nav-item" data-view="moduloA">
+          <span class="nav-icon">&#9679;</span>
+          <span class="nav-label">Validación de Huéspedes</span>
+          <span class="nav-badge">A</span>
+        </button>
+
+        <button class="nav-item" data-view="moduloB">
+          <span class="nav-icon">&#9679;</span>
+          <span class="nav-label">Comandas e Inventario</span>
+          <span class="nav-badge">B</span>
+        </button>
+
+        <button class="nav-item" data-view="moduloC">
+          <span class="nav-icon">&#9679;</span>
+          <span class="nav-label">Financiero y Reportes</span>
+          <span class="nav-badge">C</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span id="sidebar-clock"></span>
+      </div>
+    </aside>
+
+    <!-- ============ CONTENIDO ============ -->
+    <main class="main">
+      <header class="topbar">
+        <h1 id="page-title">Inicio</h1>
+        <div class="topbar-right">
+          <span id="today-date" class="today-date"></span>
+        </div>
+      </header>
+
+      <!-- ======= VISTA: INICIO ======= -->
+      <section id="view-inicio" class="view">
+        <div class="grid-3">
+          <article class="card card-module">
+            <div class="card-module-tag tag-a">Módulo A</div>
+            <h3>Validación de Huéspedes y Reservas</h3>
+            <p>Busca huéspedes por documento o reserva, valida su plan de comidas y controla los consumos del día.</p>
+            <button class="btn btn-primary" data-view="moduloA">Ir al módulo</button>
+          </article>
+          <article class="card card-module">
+            <div class="card-module-tag tag-b">Módulo B</div>
+            <h3>Comandas e Inventario</h3>
+            <p>Registra pedidos por mesero y mesa, con descuento automático de stock e IA de sugerencia.</p>
+            <button class="btn btn-secondary" data-view="moduloB">Ir al módulo</button>
+          </article>
+          <article class="card card-module">
+            <div class="card-module-tag tag-c">Módulo C</div>
+            <h3>Financiero y Reportes</h3>
+            <p>Flujo de caja diario y reporte operativo de comidas entregadas. Análisis con Python.</p>
+            <button class="btn btn-secondary" data-view="moduloC">Ir al módulo</button>
+          </article>
+        </div>
+      </section>
+
+      <!-- ======= VISTA: MÓDULO A ======= -->
+      <section id="view-moduloA" class="view hidden">
+        <div class="card search-card">
+          <h2 class="card-title">Check-in / Búsqueda de huésped</h2>
+          <form id="form-busqueda" class="search-form" autocomplete="off">
+            <div class="field field-select">
+              <label for="buscar-tipo">Buscar por</label>
+              <select id="buscar-tipo">
+                <option value="documento">Documento</option>
+                <option value="reserva">Número de reserva</option>
+              </select>
+            </div>
+            <div class="field field-input">
+              <label for="buscar-valor">Valor</label>
+              <input id="buscar-valor" type="text" placeholder="Ej: 1023456789 o 1001" />
+            </div>
+            <button type="submit" class="btn btn-primary" id="btn-buscar">
+              <span class="btn-icon">&#128269;</span> Buscar
+            </button>
+          </form>
+        </div>
+
+        <div id="resultado" class="hidden">
+          <!-- Contenido inyectado por moduloA.js -->
+        </div>
+      </section>
+
+      <!-- ======= VISTA: MÓDULO B (en construcción) ======= -->
+      <section id="view-moduloB" class="view hidden">
+        <div class="card placeholder">
+          <div class="placeholder-icon">&#128722;</div>
+          <h2>Módulo B — Comandas e Inventario</h2>
+          <p>Este módulo se implementará en la siguiente parte del proyecto.</p>
+        </div>
+      </section>
+
+      <!-- ======= VISTA: MÓDULO C (en construcción) ======= -->
+      <section id="view-moduloC" class="view hidden">
+        <div class="card placeholder">
+          <div class="placeholder-icon">&#128200;</div>
+          <h2>Módulo C — Financiero y Reportes</h2>
+          <p>Este módulo se implementará en la siguiente parte del proyecto.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/moduloA.js"></script>
+</body>
+</html>

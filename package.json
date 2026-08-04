@@ -1,0 +1,13 @@
+{
+  "name": "hotel-andino",
+  "version": "1.0.0",
+  "description": "Sistema de gestión para Hotel Andino S.A.S. (Módulo A: Validación de Huéspedes y Reservas)",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node server/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
