@@ -130,6 +130,11 @@ const App = (() => {
   /* ---------- Navegación ---------- */
 
   function mostrarVista(nombre) {
+    // Módulos B y C son solo para administradores
+    if (sesion && sesion.rol !== 'admin' && (nombre === 'moduloB' || nombre === 'moduloC')) {
+      nombre = 'inicio';
+    }
+
     document.querySelectorAll('.view').forEach((v) => v.classList.add('hidden'));
     const seccion = document.getElementById('view-' + nombre);
     if (seccion) seccion.classList.remove('hidden');
@@ -142,6 +147,7 @@ const App = (() => {
     if (titulo && TITULOS[nombre]) titulo.textContent = TITULOS[nombre];
 
     if (nombre === 'moduloA') ModuloA.refrescarVista();
+    if (nombre === 'moduloB') ModuloB.refrescar();
   }
 
   /* ---------- Reloj ---------- */

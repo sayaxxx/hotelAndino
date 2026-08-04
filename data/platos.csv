@@ -1,0 +1,13 @@
+id,nombre,categoria,precio
+1,Jugo de naranja,Bebidas,3000
+2,Café con leche,Bebidas,2500
+3,Pan de yuca con queso,Desayuno,5000
+4,Huevos revueltos,Desayuno,8000
+5,Avena con granola,Desayuno,6000
+6,Bandeja andina,Almuerzo,18000
+7,Pollo a la plancha,Almuerzo,15000
+8,Frijolada,Almuerzo,14000
+9,Carne asada,Almuerzo,20000
+10,Ensalada fresca,Almuerzo,9000
+11,Sopa de pollo,Cena,12000
+12,Cena ligera,Cena,15000

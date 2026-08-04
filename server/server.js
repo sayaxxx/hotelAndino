@@ -320,6 +320,289 @@ app.post('/api/reservas', requireAuth, requireAdmin, (req, res) => {
 });
 
 // ------------------------------------------------------------------
+// MÓDULO B — Comandas e Inventario
+// ------------------------------------------------------------------
+
+function redondear(n) {
+  return Math.round(n * 100) / 100;
+}
+
+// Datos base del módulo (meseros y mesas)
+app.get('/api/meseros', requireAuth, (req, res) => {
+  const meseros = readCsv('usuarios.csv')
+    .filter((u) => u.rol === 'mesero')
+    .map((u) => ({ id: u.id, nombre: u.nombre }));
+  res.json({ meseros });
+});
+
+app.get('/api/mesas', requireAuth, (req, res) => {
+  res.json({ mesas: readCsv('mesas.csv').map(stripInternal) });
+});
+
+// Menú con disponibilidad de porciones según el stock actual
+app.get('/api/platos', requireAuth, (req, res) => {
+  const platos = readCsv('platos.csv');
+  const recetas = readCsv('plato_ingredientes.csv');
+  const productos = readCsv('productos.csv');
+
+  const lista = platos.map((p) => {
+    const ingredientes = recetas.filter((r) => r.id_plato === p.id).map((r) => {
+      const prod = productos.find((x) => x.id === r.id_producto);
+      return {
+        id_producto: r.id_producto,
+        nombre: prod ? prod.nombre : '?',
+        cantidad: parseFloat(r.cantidad),
+        stock: prod ? parseFloat(prod.stock) : 0,
+        stock_minimo: prod ? parseFloat(prod.stock_minimo) : 0,
+      };
+    });
+
+    // Porciones que se pueden preparar con el stock actual
+    let porciones = Infinity;
+    for (const ing of ingredientes) {
+      if (ing.cantidad > 0) porciones = Math.min(porciones, Math.floor(ing.stock / ing.cantidad));
+    }
+    if (!Number.isFinite(porciones)) porciones = 999;
+
+    return {
+      ...stripInternal(p),
+      precio: parseFloat(p.precio),
+      ingredientes,
+      porcionesDisponibles: porciones,
+      stockBajo: porciones > 0 && porciones <= 5,
+    };
+  });
+
+  res.json({ platos: lista });
+});
+
+// Inventario
+app.get('/api/inventario', requireAuth, (req, res) => {
+  const inventario = readCsv('productos.csv').map((p) => {
+    const stock = parseFloat(p.stock);
+    const stockMinimo = parseFloat(p.stock_minimo);
+    return {
+      ...stripInternal(p),
+      stock,
+      stock_minimo: stockMinimo,
+      estado: stock <= 0 ? 'Agotado' : stock <= stockMinimo ? 'Bajo' : 'Disponible',
+    };
+  });
+  res.json({ inventario });
+});
+
+app.put('/api/inventario/:id', requireAuth, requireAdmin, (req, res) => {
+  const stock = parseFloat((req.body || {}).stock);
+  if (isNaN(stock) || stock < 0) {
+    return res.status(400).json({ error: 'Stock inválido.' });
+  }
+  const productos = readCsv('productos.csv');
+  const prod = productos.find((p) => p.id === req.params.id);
+  if (!prod) {
+    return res.status(404).json({ error: 'Producto no encontrado.' });
+  }
+  prod.stock = String(stock);
+  writeCsv('productos.csv', productos);
+  res.json({ message: `Stock de ${prod.nombre} actualizado a ${redondear(stock)}.`, producto: stripInternal(prod) });
+});
+
+// Registrar comanda con descuento automático de stock
+app.post('/api/comandas', requireAuth, requireAdmin, (req, res) => {
+  const { id_mesero, tipo_servicio, id_mesa, id_reserva, platos } = req.body || {};
+
+  if (!id_mesero) return res.status(400).json({ error: 'Seleccione el mesero responsable.' });
+  const mesero = readCsv('usuarios.csv').find((m) => m.id === String(id_mesero) && m.rol === 'mesero');
+  if (!mesero) return res.status(400).json({ error: 'El mesero seleccionado no es válido.' });
+
+  if (!['mesa', 'huesped'].includes(tipo_servicio)) {
+    return res.status(400).json({ error: 'Tipo de servicio inválido.' });
+  }
+  if (tipo_servicio === 'mesa') {
+    if (!id_mesa) return res.status(400).json({ error: 'Seleccione la mesa.' });
+    if (!readCsv('mesas.csv').some((m) => m.id === String(id_mesa))) {
+      return res.status(400).json({ error: 'La mesa seleccionada no es válida.' });
+    }
+  } else {
+    if (!id_reserva) return res.status(400).json({ error: 'Indique el número de reserva del huésped.' });
+    const rsv = readCsv('reservas.csv').find((r) => r.id_reserva === String(id_reserva));
+    if (!rsv) return res.status(400).json({ error: 'La reserva no existe.' });
+    if (rsv.estado !== 'Activa') return res.status(400).json({ error: 'La reserva no está activa.' });
+  }
+
+  if (!Array.isArray(platos) || platos.length === 0) {
+    return res.status(400).json({ error: 'Agregue al menos un plato a la comanda.' });
+  }
+
+  const platosCsv = readCsv('platos.csv');
+  const recetas = readCsv('plato_ingredientes.csv');
+  const productos = readCsv('productos.csv');
+
+  const detalle = [];
+  let total = 0;
+  const requeridos = new Map(); // id_producto -> cantidad total
+
+  for (const item of platos) {
+    const cant = parseInt(item.cantidad, 10);
+    if (!cant || cant <= 0) continue;
+    const plato = platosCsv.find((p) => p.id === String(item.id_plato));
+    if (!plato) return res.status(400).json({ error: 'Un plato de la comanda no existe.' });
+
+    const subtotal = parseFloat(plato.precio) * cant;
+    total += subtotal;
+    detalle.push({ id_plato: plato.id, nombre: plato.nombre, cantidad: cant, subtotal: redondear(subtotal) });
+
+    for (const r of recetas.filter((r) => r.id_plato === plato.id)) {
+      const req = parseFloat(r.cantidad) * cant;
+      requeridos.set(r.id_producto, redondear((requeridos.get(r.id_producto) || 0) + req));
+    }
+  }
+
+  if (detalle.length === 0) {
+    return res.status(400).json({ error: 'Indique cantidades válidas de platos.' });
+  }
+
+  // Validar stock suficiente para todos los ingredientes
+  const faltantes = [];
+  for (const [idProd, cantidadReq] of requeridos) {
+    const prod = productos.find((p) => p.id === idProd);
+    const stock = prod ? parseFloat(prod.stock) : 0;
+    if (stock < cantidadReq) {
+      faltantes.push(
+        `${prod ? prod.nombre : 'Producto ' + idProd}: requiere ${redondear(cantidadReq)} ${prod ? prod.unidad : ''}, disponible ${redondear(stock)}`
+      );
+    }
+  }
+  if (faltantes.length) {
+    return res.status(400).json({ error: 'Stock insuficiente para registrar la comanda.', faltantes });
+  }
+
+  // Descontar stock
+  for (const [idProd, cantidadReq] of requeridos) {
+    const prod = productos.find((p) => p.id === idProd);
+    prod.stock = String(redondear(parseFloat(prod.stock) - cantidadReq));
+  }
+  writeCsv('productos.csv', productos);
+
+  // Crear comanda
+  const comandas = readCsv('comandas.csv');
+  const id_comanda = String(nextId(comandas, 'id_comanda'));
+  const nueva = {
+    id_comanda,
+    id_mesero: String(id_mesero),
+    tipo_servicio,
+    id_mesa: tipo_servicio === 'mesa' ? String(id_mesa) : '',
+    id_reserva: tipo_servicio === 'huesped' ? String(id_reserva) : '',
+    fecha: todayStr(),
+    hora: nowTime(),
+    estado: 'Registrada',
+    total: String(redondear(total)),
+  };
+  comandas.push(nueva);
+  writeCsv('comandas.csv', comandas);
+
+  const items = readCsv('comanda_platos.csv');
+  detalle.forEach((d) => {
+    items.push({
+      id: String(nextId(items, 'id')),
+      id_comanda,
+      id_plato: d.id_plato,
+      cantidad: String(d.cantidad),
+      subtotal: String(d.subtotal),
+      estado: 'Registrada',
+    });
+  });
+  writeCsv('comanda_platos.csv', items);
+
+  res.status(201).json({
+    message: `Comanda ${id_comanda} registrada correctamente.`,
+    comanda: stripInternal(nueva),
+    detalle,
+  });
+});
+
+// Listar comandas de un día
+app.get('/api/comandas', requireAuth, (req, res) => {
+  const fecha = req.query.fecha || todayStr();
+  const comandas = readCsv('comandas.csv').filter((c) => c.fecha === fecha);
+  const meseros = readCsv('usuarios.csv');
+  const mesas = readCsv('mesas.csv');
+  const reservas = readCsv('reservas.csv');
+  const huespedes = readCsv('huespedes.csv');
+  const items = readCsv('comanda_platos.csv');
+  const platos = readCsv('platos.csv');
+
+  const lista = comandas
+    .sort((a, b) => a.id_comanda.localeCompare(b.id_comanda))
+    .map((c) => {
+      const mesero = meseros.find((m) => m.id === c.id_mesero);
+      let cliente = '';
+      if (c.tipo_servicio === 'mesa') {
+        const mesa = mesas.find((m) => m.id === c.id_mesa);
+        cliente = mesa ? mesa.nombre : 'Mesa ' + c.id_mesa;
+      } else {
+        const rsv = reservas.find((r) => r.id_reserva === c.id_reserva);
+        const hp = rsv ? huespedes.find((h) => h.id === rsv.id_huesped) : null;
+        cliente = hp ? `${hp.nombre} (Res. ${c.id_reserva})` : 'Res. ' + c.id_reserva;
+      }
+      const comandaItems = items.filter((i) => i.id_comanda === c.id_comanda).map((i) => {
+        const p = platos.find((x) => x.id === i.id_plato);
+        return { ...stripInternal(i), nombre: p ? p.nombre : '?', precio: p ? parseFloat(p.precio) : 0 };
+      });
+      return {
+        ...stripInternal(c),
+        total: parseFloat(c.total),
+        mesero: mesero ? mesero.nombre : c.id_mesero,
+        cliente,
+        items: comandaItems,
+      };
+    });
+
+  res.json({ fecha, comandas: lista });
+});
+
+// Marcar comanda como entregada
+app.post('/api/comandas/:id/entregar', requireAuth, requireAdmin, (req, res) => {
+  const comandas = readCsv('comandas.csv');
+  const c = comandas.find((x) => x.id_comanda === req.params.id);
+  if (!c) return res.status(404).json({ error: 'Comanda no encontrada.' });
+  if (c.estado !== 'Registrada') {
+    return res.status(400).json({ error: 'Solo se puede entregar una comanda en estado Registrada.' });
+  }
+  c.estado = 'Entregada';
+  writeCsv('comandas.csv', comandas);
+  res.json({ message: `Comanda ${c.id_comanda} marcada como entregada.` });
+});
+
+// Cancelar comanda y restaurar stock
+app.post('/api/comandas/:id/cancelar', requireAuth, requireAdmin, (req, res) => {
+  const comandas = readCsv('comandas.csv');
+  const c = comandas.find((x) => x.id_comanda === req.params.id);
+  if (!c) return res.status(404).json({ error: 'Comanda no encontrada.' });
+  if (c.estado !== 'Registrada') {
+    return res.status(400).json({ error: 'Solo se puede cancelar una comanda en estado Registrada.' });
+  }
+
+  const items = readCsv('comanda_platos.csv').filter((i) => i.id_comanda === c.id_comanda);
+  const recetas = readCsv('plato_ingredientes.csv');
+  const productos = readCsv('productos.csv');
+
+  for (const item of items) {
+    const cant = parseInt(item.cantidad, 10) || 0;
+    for (const r of recetas.filter((r) => r.id_plato === item.id_plato)) {
+      const prod = productos.find((p) => p.id === r.id_producto);
+      if (prod) {
+        prod.stock = String(redondear(parseFloat(prod.stock) + parseFloat(r.cantidad) * cant));
+      }
+    }
+  }
+  writeCsv('productos.csv', productos);
+
+  c.estado = 'Cancelada';
+  writeCsv('comandas.csv', comandas);
+  res.json({ message: `Comanda ${c.id_comanda} cancelada. Stock restaurado al inventario.` });
+});
+
+// ------------------------------------------------------------------
 // Ruta principal
 // ------------------------------------------------------------------
 app.get('/', (req, res) => {

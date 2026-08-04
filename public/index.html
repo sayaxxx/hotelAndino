@@ -50,13 +50,13 @@
           <span class="nav-badge">A</span>
         </button>
 
-        <button class="nav-item" data-view="moduloB">
+        <button class="nav-item solo-admin hidden" data-view="moduloB">
           <span class="nav-icon">&#9679;</span>
           <span class="nav-label">Comandas e Inventario</span>
           <span class="nav-badge">B</span>
         </button>
 
-        <button class="nav-item" data-view="moduloC">
+        <button class="nav-item solo-admin hidden" data-view="moduloC">
           <span class="nav-icon">&#9679;</span>
           <span class="nav-label">Financiero y Reportes</span>
           <span class="nav-badge">C</span>
@@ -97,13 +97,13 @@
             <p>Busca huéspedes por documento o reserva, valida su plan de comidas y controla los consumos del día.</p>
             <button class="btn btn-primary" data-view="moduloA">Ir al módulo</button>
           </article>
-          <article class="card card-module">
+          <article class="card card-module solo-admin hidden">
             <div class="card-module-tag tag-b">Módulo B</div>
             <h3>Comandas e Inventario</h3>
-            <p>Registra pedidos por mesero y mesa, con descuento automático de stock e IA de sugerencia.</p>
+            <p>Registra pedidos por mesero y mesa, con descuento automático de stock.</p>
             <button class="btn btn-secondary" data-view="moduloB">Ir al módulo</button>
           </article>
-          <article class="card card-module">
+          <article class="card card-module solo-admin hidden">
             <div class="card-module-tag tag-c">Módulo C</div>
             <h3>Financiero y Reportes</h3>
             <p>Flujo de caja diario y reporte operativo de comidas entregadas. Análisis con Python.</p>
@@ -139,12 +139,75 @@
         </div>
       </section>
 
-      <!-- ======= VISTA: MÓDULO B (en construcción) ======= -->
+      <!-- ======= VISTA: MÓDULO B ======= -->
       <section id="view-moduloB" class="view hidden">
-        <div class="card placeholder">
-          <div class="placeholder-icon">&#128722;</div>
-          <h2>Módulo B — Comandas e Inventario</h2>
-          <p>Este módulo se implementará en la siguiente parte del proyecto.</p>
+        <div class="card tabs-card">
+          <div class="tabs" id="moduloB-tabs">
+            <button class="tab active" data-tab="tab-comanda">Registrar comanda</button>
+            <button class="tab" data-tab="tab-inventario">Inventario</button>
+            <button class="tab" data-tab="tab-comandas">Comandas del día</button>
+          </div>
+        </div>
+
+        <!-- Registro de comanda -->
+        <div id="tab-comanda" class="tab-pane">
+          <div class="comanda-layout">
+            <div class="card">
+              <h2 class="card-title">Selecciona los platos</h2>
+              <div class="filtro-categorias" id="filtro-categorias"></div>
+              <div id="lista-platos" class="plato-grid"></div>
+            </div>
+
+            <div class="card resumen-card">
+              <h2 class="card-title">Detalles de la comanda</h2>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="com-mesero">Mesero responsable *</label>
+                  <select id="com-mesero"><option value="">Seleccionar...</option></select>
+                </div>
+                <div class="field">
+                  <label>Tipo de servicio</label>
+                  <div class="checks">
+                    <label class="check"><input type="radio" name="com-tipo" value="mesa" checked /> Mesa</label>
+                    <label class="check"><input type="radio" name="com-tipo" value="huesped" /> Huésped</label>
+                  </div>
+                </div>
+                <div class="field" id="campo-mesa">
+                  <label for="com-mesa">Mesa *</label>
+                  <select id="com-mesa"><option value="">Seleccionar...</option></select>
+                </div>
+                <div class="field hidden" id="campo-reserva">
+                  <label for="com-reserva">N° de reserva *</label>
+                  <input id="com-reserva" type="text" placeholder="Ej: 1002" />
+                </div>
+              </div>
+
+              <h3 class="resumen-sub">Platos seleccionados</h3>
+              <div id="resumen-platos" class="resumen-platos"></div>
+
+              <div id="comanda-error" class="alert alert-error hidden"></div>
+
+              <div class="resumen-total">Total: <strong id="resumen-total">$0</strong></div>
+              <button type="button" class="btn btn-primary btn-block" id="btn-registrar-comanda" disabled>Registrar comanda</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Inventario -->
+        <div id="tab-inventario" class="tab-pane hidden">
+          <div class="card">
+            <h2 class="card-title">Inventario de productos</h2>
+            <p class="tab-hint">Los stocks se descuentan automáticamente al registrar comandas. Edite la cantidad y presione Actualizar para ajustar manualmente.</p>
+            <div id="tabla-inventario"></div>
+          </div>
+        </div>
+
+        <!-- Comandas del día -->
+        <div id="tab-comandas" class="tab-pane hidden">
+          <div class="card">
+            <h2 class="card-title">Comandas del día</h2>
+            <div id="tabla-comandas"></div>
+          </div>
         </div>
       </section>
 
@@ -238,5 +301,6 @@
   <script src="js/api.js"></script>
   <script src="js/app.js"></script>
   <script src="js/moduloA.js"></script>
+  <script src="js/moduloB.js"></script>
 </body>
 </html>

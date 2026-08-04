@@ -34,7 +34,10 @@ const Api = (() => {
       throw new Error(data.error || 'La sesión expiró. Inicie sesión nuevamente.');
     }
     if (!res.ok) {
-      throw new Error(data.error || 'Ocurrió un error en el servidor.');
+      const err = new Error(data.error || 'Ocurrió un error en el servidor.');
+      err.data = data;
+      if (data.faltantes) err.faltantes = data.faltantes;
+      throw err;
     }
     return data;
   }
@@ -75,6 +78,41 @@ const Api = (() => {
         method: 'POST',
         body: JSON.stringify(datos),
       });
+    },
+
+    /* --- Módulo B: comandas e inventario --- */
+    listarMeseros() {
+      return request('/api/meseros');
+    },
+    listarMesas() {
+      return request('/api/mesas');
+    },
+    listarPlatos() {
+      return request('/api/platos');
+    },
+    listarInventario() {
+      return request('/api/inventario');
+    },
+    ajustarStock(id, stock) {
+      return request(`/api/inventario/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ stock }),
+      });
+    },
+    crearComanda(datos) {
+      return request('/api/comandas', {
+        method: 'POST',
+        body: JSON.stringify(datos),
+      });
+    },
+    listarComandas(fecha) {
+      return request(`/api/comandas?fecha=${encodeURIComponent(fecha || '')}`);
+    },
+    entregarComanda(id) {
+      return request(`/api/comandas/${encodeURIComponent(id)}/entregar`, { method: 'POST' });
+    },
+    cancelarComanda(id) {
+      return request(`/api/comandas/${encodeURIComponent(id)}/cancelar`, { method: 'POST' });
     },
   };
 })();
