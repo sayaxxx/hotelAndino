@@ -114,5 +114,19 @@ const Api = (() => {
     cancelarComanda(id) {
       return request(`/api/comandas/${encodeURIComponent(id)}/cancelar`, { method: 'POST' });
     },
+
+    /* --- Módulo C: financiero y reportes --- */
+    listarCaja(fecha) {
+      return request(`/api/caja?fecha=${encodeURIComponent(fecha || '')}`);
+    },
+    registrarCaja(datos) {
+      return request('/api/caja', {
+        method: 'POST',
+        body: JSON.stringify(datos),
+      });
+    },
+    reporteOperativo(fecha) {
+      return request(`/api/reporte-operativo?fecha=${encodeURIComponent(fecha || '')}`);
+    },
   };
 })();

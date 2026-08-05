@@ -603,6 +603,120 @@ app.post('/api/comandas/:id/cancelar', requireAuth, requireAdmin, (req, res) => 
 });
 
 // ------------------------------------------------------------------
+// MÓDULO C — Financiero y Reportes
+// ------------------------------------------------------------------
+
+const ORIGENES_CAJA = ['externo', 'huesped', 'gasto'];
+
+// Flujo de caja: movimientos y totales del día
+app.get('/api/caja', requireAuth, requireAdmin, (req, res) => {
+  const fecha = req.query.fecha || todayStr();
+  const movimientos = readCsv('caja.csv')
+    .filter((m) => m.fecha === fecha)
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map(stripInternal);
+
+  const sumar = (fn) =>
+    movimientos.filter(fn).reduce((s, m) => s + parseFloat(m.valor), 0);
+
+  const ingresos = sumar((m) => m.tipo === 'ingreso');
+  const egresos = sumar((m) => m.tipo === 'egreso');
+
+  res.json({
+    fecha,
+    movimientos,
+    totales: {
+      externos: redondear(sumar((m) => m.origen === 'externo' && m.tipo === 'ingreso')),
+      huespedes: redondear(sumar((m) => m.origen === 'huesped' && m.tipo === 'ingreso')),
+      ingresos: redondear(ingresos),
+      egresos: redondear(egresos),
+      neto: redondear(ingresos - egresos),
+    },
+  });
+});
+
+// Registrar un movimiento de caja
+app.post('/api/caja', requireAuth, requireAdmin, (req, res) => {
+  const { tipo, origen, id_reserva, concepto, valor } = req.body || {};
+
+  if (!['ingreso', 'egreso'].includes(tipo)) {
+    return res.status(400).json({ error: 'Tipo de movimiento inválido.' });
+  }
+  if (!ORIGENES_CAJA.includes(origen)) {
+    return res.status(400).json({ error: 'Origen del movimiento inválido.' });
+  }
+  const v = parseFloat(valor);
+  if (isNaN(v) || v <= 0) {
+    return res.status(400).json({ error: 'Ingrese un valor mayor a cero.' });
+  }
+  if (!concepto || !String(concepto).trim()) {
+    return res.status(400).json({ error: 'Indique el concepto del movimiento.' });
+  }
+  if (origen === 'huesped') {
+    if (!id_reserva) {
+      return res.status(400).json({ error: 'Indique el número de reserva del huésped.' });
+    }
+    const rsv = readCsv('reservas.csv').find((r) => r.id_reserva === String(id_reserva));
+    if (!rsv) return res.status(400).json({ error: 'La reserva no existe.' });
+  }
+
+  const caja = readCsv('caja.csv');
+  const nuevo = {
+    id: String(nextId(caja, 'id')),
+    origen,
+    tipo,
+    id_reserva: origen === 'huesped' ? String(id_reserva) : '',
+    concepto: String(concepto).trim(),
+    valor: String(v),
+    fecha: todayStr(),
+    hora: nowTime(),
+    registrado_por: req.usuario.nombre,
+  };
+  caja.push(nuevo);
+  writeCsv('caja.csv', caja);
+
+  res.status(201).json({ message: 'Movimiento de caja registrado.', movimiento: stripInternal(nuevo) });
+});
+
+// Reporte operativo: comidas entregadas del día
+app.get('/api/reporte-operativo', requireAuth, requireAdmin, (req, res) => {
+  const fecha = req.query.fecha || todayStr();
+  const consumos = readCsv('consumos.csv')
+    .filter((c) => c.fecha === fecha)
+    .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
+  const reservas = readCsv('reservas.csv');
+  const huespedes = readCsv('huespedes.csv');
+
+  const comidas = { Desayuno: 0, Almuerzo: 0, Cena: 0 };
+  consumos.forEach((c) => {
+    if (comidas[c.servicio] !== undefined) comidas[c.servicio]++;
+  });
+
+  const detalle = consumos.map((c) => {
+    const rsv = reservas.find((r) => r.id_reserva === c.id_reserva);
+    const hp = rsv ? huespedes.find((h) => h.id === rsv.id_huesped) : null;
+    return {
+      ...stripInternal(c),
+      huesped: hp ? hp.nombre : '',
+      habitacion: rsv ? rsv.habitacion : '',
+    };
+  });
+
+  const comandas = readCsv('comandas.csv').filter(
+    (c) => c.fecha === fecha && c.estado !== 'Cancelada'
+  );
+  const ventasComandas = comandas.reduce((s, c) => s + parseFloat(c.total), 0);
+
+  res.json({
+    fecha,
+    comidas,
+    totalComidas: consumos.length,
+    detalle,
+    comandas: { cantidad: comandas.length, ventas: redondear(ventasComandas) },
+  });
+});
+
+// ------------------------------------------------------------------
 // Ruta principal
 // ------------------------------------------------------------------
 app.get('/', (req, res) => {

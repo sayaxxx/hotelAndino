@@ -969,6 +969,102 @@ tbody tr:hover { background: #fafbfa; }
 
 .sin-acciones { color: var(--texto-suave); font-size: 13px; }
 
+/* =========================== MÓDULO C =========================== */
+.resumen-tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: var(--blanco);
+  border: 1px solid var(--gris-borde);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--sombra);
+}
+
+.stat-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--texto-suave);
+  margin-bottom: 6px;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--verde-900);
+}
+
+.stat-value.positivo { color: var(--verde-exito); }
+.stat-value.negativo { color: var(--rojo); }
+.stat-value.neutro { color: var(--texto); }
+
+.stat-sub {
+  font-size: 12px;
+  color: var(--texto-suave);
+  margin-top: 4px;
+}
+
+/* Gráfico de barras (CSS) */
+.chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 24px;
+  height: 230px;
+  padding: 10px 6px 0;
+  border-bottom: 2px solid var(--gris-borde);
+}
+
+.chart-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+  max-width: 130px;
+  height: 100%;
+}
+
+.chart-value {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--verde-900);
+  margin-bottom: 6px;
+}
+
+.chart-bar {
+  width: 100%;
+  max-width: 70px;
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(180deg, var(--verde-700), var(--verde-800));
+  min-height: 4px;
+  transition: height 0.3s ease;
+}
+
+.chart-bar.desayuno { background: linear-gradient(180deg, #e8b54b, #c9a45c); }
+.chart-bar.almuerzo { background: linear-gradient(180deg, #5fa97c, var(--verde-700)); }
+.chart-bar.cena { background: linear-gradient(180deg, #5f7ea9, #33547d); }
+
+.chart-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-suave);
+  margin-top: 8px;
+}
+
+.valor-mov {
+  font-weight: 700;
+}
+
+.valor-mov.ingreso { color: var(--verde-exito); }
+.valor-mov.egreso { color: var(--rojo); }
+
 /* =========================== TOAST =========================== */
 .toast {
   position: fixed;

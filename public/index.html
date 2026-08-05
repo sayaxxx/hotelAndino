@@ -211,12 +211,72 @@
         </div>
       </section>
 
-      <!-- ======= VISTA: MÓDULO C (en construcción) ======= -->
+      <!-- ======= VISTA: MÓDULO C ======= -->
       <section id="view-moduloC" class="view hidden">
-        <div class="card placeholder">
-          <div class="placeholder-icon">&#128200;</div>
-          <h2>Módulo C — Financiero y Reportes</h2>
-          <p>Este módulo se implementará en la siguiente parte del proyecto.</p>
+        <div class="card tabs-card">
+          <div class="tabs" id="moduloC-tabs">
+            <button class="tab active" data-tab="tab-caja">Flujo de caja</button>
+            <button class="tab" data-tab="tab-reporte">Reporte operativo</button>
+          </div>
+        </div>
+
+        <!-- Flujo de caja -->
+        <div id="tab-caja" class="tab-pane">
+          <div class="resumen-tarjetas" id="caja-resumen"></div>
+
+          <div class="card">
+            <h2 class="card-title">Registrar movimiento de caja</h2>
+            <form id="form-caja" class="search-form" autocomplete="off">
+              <div class="field">
+                <label for="caja-tipo">Tipo</label>
+                <select id="caja-tipo">
+                  <option value="ingreso">Ingreso</option>
+                  <option value="egreso">Egreso (gasto)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="caja-origen">Origen</label>
+                <select id="caja-origen">
+                  <option value="externo">Cliente externo</option>
+                  <option value="huesped">Huésped (consumo extra)</option>
+                  <option value="gasto">Gasto de operación</option>
+                </select>
+              </div>
+              <div class="field hidden" id="campo-caja-reserva">
+                <label for="caja-reserva">N° de reserva *</label>
+                <input id="caja-reserva" type="text" placeholder="Ej: 1002" />
+              </div>
+              <div class="field field-input">
+                <label for="caja-concepto">Concepto *</label>
+                <input id="caja-concepto" type="text" placeholder="Ej: Bandeja extra" />
+              </div>
+              <div class="field">
+                <label for="caja-valor">Valor ($) *</label>
+                <input id="caja-valor" type="number" min="0" step="100" placeholder="0" />
+              </div>
+              <button type="submit" class="btn btn-primary">Registrar</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <h2 class="card-title">Movimientos del día</h2>
+            <div id="tabla-caja"></div>
+          </div>
+        </div>
+
+        <!-- Reporte operativo -->
+        <div id="tab-reporte" class="tab-pane hidden">
+          <div class="resumen-tarjetas" id="reporte-resumen"></div>
+
+          <div class="card">
+            <h2 class="card-title">Comidas entregadas del día</h2>
+            <div id="grafico-comidas"></div>
+          </div>
+
+          <div class="card">
+            <h2 class="card-title">Detalle de consumos del día</h2>
+            <div id="tabla-consumos"></div>
+          </div>
         </div>
       </section>
     </main>
@@ -302,5 +362,6 @@
   <script src="js/app.js"></script>
   <script src="js/moduloA.js"></script>
   <script src="js/moduloB.js"></script>
+  <script src="js/moduloC.js"></script>
 </body>
 </html>

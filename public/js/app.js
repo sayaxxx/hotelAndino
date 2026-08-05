@@ -148,6 +148,7 @@ const App = (() => {
 
     if (nombre === 'moduloA') ModuloA.refrescarVista();
     if (nombre === 'moduloB') ModuloB.refrescar();
+    if (nombre === 'moduloC') ModuloC.refrescar();
   }
 
   /* ---------- Reloj ---------- */
