@@ -133,6 +133,15 @@ const Api = (() => {
     listarInventario() {
       return request('/api/inventario');
     },
+    crearProducto(datos) {
+      return request('/api/inventario', {
+        method: 'POST',
+        body: JSON.stringify(datos),
+      });
+    },
+    eliminarProducto(id) {
+      return request(`/api/inventario/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    },
     ajustarStock(id, stock) {
       return request(`/api/inventario/${encodeURIComponent(id)}`, {
         method: 'PUT',
@@ -167,6 +176,11 @@ const Api = (() => {
     },
     reporteOperativo(fecha) {
       return request(`/api/reporte-operativo?fecha=${encodeURIComponent(fecha || '')}`);
+    },
+
+    /* --- Dashboard --- */
+    listarDashboard() {
+      return request('/api/dashboard');
     },
   };
 })();

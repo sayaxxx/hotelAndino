@@ -1,6 +1,6 @@
 /* ============================================================
    Módulo A — Validación de Huéspedes y Reservas
-   - Búsqueda por documento o N° de reserva
+   - Autobúsqueda mientras se escribe (documento / N° de reserva / nombre)
    - Validación del plan de comidas
    - Control de consumo (marcar / evitar duplicados)
    ============================================================ */
@@ -10,47 +10,99 @@ const ModuloA = (() => {
   const COMIDAS = ['Desayuno', 'Almuerzo', 'Cena'];
 
   let estadoActual = null; // resultado de la última búsqueda
+  let debounceTimer = null;
 
   function init() {
-    const form = document.getElementById('form-busqueda');
-    form.addEventListener('submit', buscar);
+    const input = document.getElementById('buscar-valor');
+    input.addEventListener('input', () => programarBusqueda());
 
-    // Enter y tecla sin necesidad de recargar
-    form.querySelectorAll('input').forEach((i) => {
-      i.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') e.preventDefault();
-      });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') e.preventDefault();
     });
   }
 
-  async function buscar(e) {
-    e.preventDefault();
-    const tipo = document.getElementById('buscar-tipo').value;
+  /* ---------- Autobúsqueda ---------- */
+
+  function programarBusqueda() {
     const valor = document.getElementById('buscar-valor').value.trim();
+    const cont = document.getElementById('resultado');
+    const estado = document.getElementById('buscar-estado');
+
+    clearTimeout(debounceTimer);
 
     if (!valor) {
-      App.mostrarToast('Ingrese un documento o número de reserva.', 'error');
+      estado.textContent = '';
+      estado.classList.remove('spinning');
+      estadoActual = null;
+      cont.classList.add('hidden');
+      cont.innerHTML = '';
       return;
     }
 
-    const btn = document.getElementById('btn-buscar');
-    const label = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Buscando...';
+    estado.textContent = '…';
+    estado.classList.add('spinning');
+    debounceTimer = setTimeout(() => buscarAuto(valor), 350);
+  }
 
+  async function buscarAuto(valor) {
+    const estado = document.getElementById('buscar-estado');
     try {
-      const datos = await Api.buscar(tipo, valor);
-      estadoActual = datos;
-      renderizar(datos);
+      const datos = await Api.buscar('auto', valor);
+      estado.textContent = '';
+      estado.classList.remove('spinning');
+      if (datos.found) {
+        estadoActual = datos;
+        renderizar(datos);
+        return;
+      }
+      renderSugerencias(datos.sugerencias || [], datos.message, valor);
     } catch (err) {
+      estado.textContent = '';
+      estado.classList.remove('spinning');
       renderError(err.message);
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = label;
     }
   }
 
+  function seleccionarSugerencia(idReserva) {
+    const input = document.getElementById('buscar-valor');
+    input.value = idReserva;
+    clearTimeout(debounceTimer);
+    buscarAuto(idReserva);
+  }
+
   /* ---------- Renderizado ---------- */
+
+  function renderSugerencias(lista, mensaje, valor) {
+    const cont = document.getElementById('resultado');
+    cont.classList.remove('hidden');
+
+    if (!lista.length) {
+      cont.innerHTML = `<div class="alert alert-info">${esc(mensaje || 'Sin coincidencias.')}</div>`;
+      return;
+    }
+
+    cont.innerHTML = `
+      <div class="card">
+        <h2 class="card-title">Seleccione una coincidencia</h2>
+        <div class="sugerencia-list">
+          ${lista.map((s) => `
+            <button type="button" class="sugerencia-card" data-reserva="${esc(s.id_reserva)}">
+              <div class="sugerencia-txt">
+                <strong>${esc(s.huesped)}</strong>
+                <span class="sugerencia-sub">
+                  Res. ${esc(s.id_reserva)} · Hab. ${esc(s.habitacion)} · ${esc(s.documento)}
+                </span>
+              </div>
+              <span class="sugerencia-flecha">&rsaquo;</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>`;
+
+    cont.querySelectorAll('.sugerencia-card').forEach((btn) => {
+      btn.addEventListener('click', () => seleccionarSugerencia(btn.dataset.reserva));
+    });
+  }
 
   function renderizar(datos) {
     const cont = document.getElementById('resultado');
@@ -169,7 +221,7 @@ const ModuloA = (() => {
 
   function tablaConsumos(consumos) {
     if (!consumos || consumos.length === 0) {
-      return '<p style="color:var(--texto-suave)">Aún no hay consumos registrados hoy para esta reserva.</p>';
+      return '<p class="sin-datos">Aún no hay consumos registrados hoy para esta reserva.</p>';
     }
     const filas = consumos
       .map((c) => `
@@ -225,20 +277,23 @@ const ModuloA = (() => {
     // Si ya hay un resultado visible, refrescarlo desde el servidor
     if (estadoActual && estadoActual.found) {
       const r = estadoActual.reserva;
-      Api.buscar('reserva', r.id_reserva)
+      Api.buscar('auto', r.id_reserva)
         .then((datos) => {
-          estadoActual = datos;
-          renderizar(datos);
+          if (datos.found) {
+            estadoActual = datos;
+            renderizar(datos);
+          }
         })
         .catch(() => {});
     }
   }
 
   // Búsqueda programática (usada por App al crear una reserva)
-  function buscarExterno(tipo, valor) {
-    document.getElementById('buscar-tipo').value = tipo;
-    document.getElementById('buscar-valor').value = valor;
-    buscar(new Event('submit'));
+  function buscarExterno(idReserva) {
+    const input = document.getElementById('buscar-valor');
+    input.value = idReserva;
+    clearTimeout(debounceTimer);
+    buscarAuto(idReserva);
   }
 
   /* ---------- Utilidades ---------- */

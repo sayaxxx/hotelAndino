@@ -176,8 +176,88 @@ app.get('/api/search', requireAuth, (req, res) => {
   let huesped = null;
   let reserva = null;
 
+  const v = String(valor || '').trim();
+
+  const responderMatch = (rsv, hp) => {
+    const consumosReserva = consumos.filter(
+      (c) => c.id_reserva === rsv.id_reserva && c.fecha === todayStr()
+    );
+    const plan = {
+      total: MEALS.filter((m) => rsv['incluye_' + m.toLowerCase()] === '1').length,
+      comidas: MEALS.map((m) => ({
+        nombre: m,
+        incluida: rsv['incluye_' + m.toLowerCase()] === '1',
+        reclamada: consumosReserva.some((c) => c.servicio === m),
+        horaReclamo: (consumosReserva.find((c) => c.servicio === m) || {}).hora || null,
+      })),
+    };
+    return res.json({
+      found: true,
+      huesped: stripInternal(hp),
+      reserva: { ...stripInternal(rsv), plan },
+      consumos: consumosReserva.map(stripInternal),
+    });
+  };
+
+  // Búsqueda automática mientras se escribe: documento, reserva o parcial
+  if (tipo === 'auto') {
+    if (!v) {
+      return res.json({ found: false, message: 'Escriba un documento, número de reserva o nombre.', sugerencias: [] });
+    }
+
+    const porReserva = reservas.find((r) => r.id_reserva === v);
+    if (porReserva) {
+      const hp = huespedes.find((h) => h.id === porReserva.id_huesped);
+      if (hp) return responderMatch(porReserva, hp);
+    }
+
+    const porDoc = huespedes.find((h) => h.documento === v);
+    if (porDoc) {
+      const rsv = reservas
+        .filter((r) => r.id_huesped === porDoc.id)
+        .sort((a, b) => b.id_reserva.localeCompare(a.id_reserva))[0];
+      if (rsv) return responderMatch(rsv, porDoc);
+    }
+
+    // Coincidencias parciales para mostrar sugerencias mientras se escribe
+    const sugerencias = [];
+    const vistos = new Set();
+    const agregar = (rsv, hp) => {
+      if (vistos.has(rsv.id_reserva)) return;
+      vistos.add(rsv.id_reserva);
+      sugerencias.push({
+        id_reserva: rsv.id_reserva,
+        huesped: hp ? hp.nombre : '',
+        habitacion: rsv.habitacion,
+        documento: hp ? hp.documento : '',
+      });
+    };
+    for (const r of reservas) {
+      if (String(r.id_reserva).startsWith(v)) {
+        agregar(r, huespedes.find((h) => h.id === r.id_huesped));
+      }
+    }
+    for (const h of huespedes) {
+      if (
+        String(h.documento).startsWith(v) ||
+        String(h.nombre || '').toLowerCase().includes(v.toLowerCase())
+      ) {
+        const r = reservas
+          .filter((x) => x.id_huesped === h.id)
+          .sort((a, b) => b.id_reserva.localeCompare(a.id_reserva))[0];
+        if (r) agregar(r, h);
+      }
+    }
+    sugerencias.sort((a, b) => a.id_reserva.localeCompare(b.id_reserva)).slice(0, 8);
+    return res.json({
+      found: false,
+      message: sugerencias.length ? '' : `Sin coincidencias con "${v}".`,
+      sugerencias,
+    });
+  }
+
   if (tipo === 'documento') {
-    huesped = huespedes.find((h) => h.documento === String(valor).trim());
+    huesped = huespedes.find((h) => h.documento === v);
     if (!huesped) {
       return res.json({ found: false, message: 'No se encontró ningún huésped con ese documento.' });
     }
@@ -185,7 +265,7 @@ app.get('/api/search', requireAuth, (req, res) => {
       .filter((r) => r.id_huesped === huesped.id)
       .sort((a, b) => b.id_reserva.localeCompare(a.id_reserva))[0];
   } else if (tipo === 'reserva') {
-    reserva = reservas.find((r) => r.id_reserva === String(valor).trim());
+    reserva = reservas.find((r) => r.id_reserva === v);
     if (!reserva) {
       return res.json({ found: false, message: 'No se encontró ninguna reserva con ese número.' });
     }
@@ -197,27 +277,11 @@ app.get('/api/search', requireAuth, (req, res) => {
   if (!reserva) {
     return res.json({ found: false, message: 'El huésped no tiene reservas registradas.' });
   }
+  if (!huesped) {
+    return res.json({ found: false, message: 'No se encontró el huésped de la reserva.' });
+  }
 
-  const consumosReserva = consumos.filter(
-    (c) => c.id_reserva === reserva.id_reserva && c.fecha === todayStr()
-  );
-
-  const plan = {
-    total: MEALS.filter((m) => reserva['incluye_' + m.toLowerCase()] === '1').length,
-    comidas: MEALS.map((m) => ({
-      nombre: m,
-      incluida: reserva['incluye_' + m.toLowerCase()] === '1',
-      reclamada: consumosReserva.some((c) => c.servicio === m),
-      horaReclamo: (consumosReserva.find((c) => c.servicio === m) || {}).hora || null,
-    })),
-  };
-
-  res.json({
-    found: true,
-    huesped: stripInternal(huesped),
-    reserva: { ...stripInternal(reserva), plan },
-    consumos: consumosReserva.map(stripInternal),
-  });
+  responderMatch(reserva, huesped);
 });
 
 // ------------------------------------------------------------------
@@ -815,7 +879,7 @@ function redondear(n) {
 // Datos base del módulo (meseros y mesas)
 app.get('/api/meseros', requireAuth, (req, res) => {
   const meseros = readCsv('usuarios.csv')
-    .filter((u) => u.rol === 'mesero')
+    .filter((u) => u.rol !== 'admin')
     .map((u) => ({ id: u.id, nombre: u.nombre }));
   res.json({ meseros });
 });
@@ -891,12 +955,55 @@ app.put('/api/inventario/:id', requireAuth, requireAdmin, (req, res) => {
   res.json({ message: `Stock de ${prod.nombre} actualizado a ${redondear(stock)}.`, producto: stripInternal(prod) });
 });
 
+// Agregar un nuevo producto al inventario
+app.post('/api/inventario', requireAuth, requireAdmin, (req, res) => {
+  const { nombre, unidad, stock, stock_minimo } = req.body || {};
+  if (!nombre || !String(nombre).trim()) {
+    return res.status(400).json({ error: 'Indique el nombre del producto.' });
+  }
+  const s = parseFloat(stock);
+  const sm = parseFloat(stock_minimo);
+  if (isNaN(s) || s < 0) {
+    return res.status(400).json({ error: 'Stock inválido.' });
+  }
+  if (isNaN(sm) || sm < 0) {
+    return res.status(400).json({ error: 'Stock mínimo inválido.' });
+  }
+  const productos = readCsv('productos.csv');
+  if (productos.some((p) => p.nombre.toLowerCase() === String(nombre).trim().toLowerCase())) {
+    return res.status(400).json({ error: 'Ya existe un producto con ese nombre.' });
+  }
+  const nuevo = {
+    id: String(nextId(productos, 'id')),
+    nombre: String(nombre).trim(),
+    unidad: String(unidad || '').trim(),
+    stock: String(redondear(s)),
+    stock_minimo: String(redondear(sm)),
+  };
+  productos.push(nuevo);
+  writeCsv('productos.csv', productos);
+  res.status(201).json({ message: `Producto ${nuevo.nombre} agregado al inventario.`, producto: stripInternal(nuevo) });
+});
+
+// Eliminar un producto del inventario
+app.delete('/api/inventario/:id', requireAuth, requireAdmin, (req, res) => {
+  const productos = readCsv('productos.csv');
+  const idx = productos.findIndex((p) => p.id === String(req.params.id));
+  if (idx === -1) {
+    return res.status(404).json({ error: 'Producto no encontrado.' });
+  }
+  const eliminado = productos[idx];
+  productos.splice(idx, 1);
+  writeCsv('productos.csv', productos);
+  res.json({ message: `Producto ${eliminado.nombre} eliminado del inventario.` });
+});
+
 // Registrar comanda con descuento automático de stock
-app.post('/api/comandas', requireAuth, requireAdmin, (req, res) => {
+app.post('/api/comandas', requireAuth, (req, res) => {
   const { id_mesero, tipo_servicio, id_mesa, id_reserva, platos } = req.body || {};
 
   if (!id_mesero) return res.status(400).json({ error: 'Seleccione el mesero responsable.' });
-  const mesero = readCsv('usuarios.csv').find((m) => m.id === String(id_mesero) && m.rol === 'mesero');
+  const mesero = readCsv('usuarios.csv').find((m) => m.id === String(id_mesero) && m.rol !== 'admin');
   if (!mesero) return res.status(400).json({ error: 'El mesero seleccionado no es válido.' });
 
   if (!['mesa', 'huesped'].includes(tipo_servicio)) {
@@ -1046,7 +1153,7 @@ app.get('/api/comandas', requireAuth, (req, res) => {
 });
 
 // Marcar comanda como entregada
-app.post('/api/comandas/:id/entregar', requireAuth, requireAdmin, (req, res) => {
+app.post('/api/comandas/:id/entregar', requireAuth, (req, res) => {
   const comandas = readCsv('comandas.csv');
   const c = comandas.find((x) => x.id_comanda === req.params.id);
   if (!c) return res.status(404).json({ error: 'Comanda no encontrada.' });
@@ -1059,7 +1166,7 @@ app.post('/api/comandas/:id/entregar', requireAuth, requireAdmin, (req, res) => 
 });
 
 // Cancelar comanda y restaurar stock
-app.post('/api/comandas/:id/cancelar', requireAuth, requireAdmin, (req, res) => {
+app.post('/api/comandas/:id/cancelar', requireAuth, (req, res) => {
   const comandas = readCsv('comandas.csv');
   const c = comandas.find((x) => x.id_comanda === req.params.id);
   if (!c) return res.status(404).json({ error: 'Comanda no encontrada.' });
@@ -1198,6 +1305,65 @@ app.get('/api/reporte-operativo', requireAuth, requireAdmin, (req, res) => {
     totalComidas: consumos.length,
     detalle,
     comandas: { cantidad: comandas.length, ventas: redondear(ventasComandas) },
+  });
+});
+
+// ------------------------------------------------------------------
+// DASHBOARD — Resumen del día para el asistente de la portada
+// ------------------------------------------------------------------
+app.get('/api/dashboard', requireAuth, (req, res) => {
+  const fecha = req.query.fecha || todayStr();
+  const reservas = readCsv('reservas.csv');
+  const huespedes = readCsv('huespedes.csv');
+  const consumos = readCsv('consumos.csv');
+
+  const activas = reservas.filter(
+    (r) => r.estado === 'Activa' && r.fecha_checkin <= fecha && r.fecha_checkout >= fecha
+  );
+  const consumosHoy = consumos.filter((c) => c.fecha === fecha);
+
+  const pendientes = { Desayuno: 0, Almuerzo: 0, Cena: 0 };
+  const entregados = { Desayuno: 0, Almuerzo: 0, Cena: 0 };
+  for (const m of MEALS) {
+    entregados[m] = consumosHoy.filter((c) => c.servicio === m).length;
+    for (const r of activas) {
+      if (r['incluye_' + m.toLowerCase()] === '1') {
+        const ya = consumosHoy.some((c) => c.id_reserva === r.id_reserva && c.servicio === m);
+        if (!ya) pendientes[m]++;
+      }
+    }
+  }
+
+  // Stock bajo solo para administradores (el kiosco no ve inventario)
+  let stock_bajo = [];
+  let agotados = [];
+  if (req.usuario.rol === 'admin') {
+    const productos = readCsv('productos.csv');
+    stock_bajo = productos
+      .filter((p) => {
+        const stock = parseFloat(p.stock);
+        const min = parseFloat(p.stock_minimo);
+        return stock > 0 && stock <= min;
+      })
+      .map((p) => ({ ...stripInternal(p), stock: parseFloat(p.stock), stock_minimo: parseFloat(p.stock_minimo) }));
+    agotados = productos
+      .filter((p) => parseFloat(p.stock) <= 0)
+      .map((p) => ({ ...stripInternal(p), stock: parseFloat(p.stock), stock_minimo: parseFloat(p.stock_minimo) }));
+  }
+
+  res.json({
+    fecha,
+    total_huespedes: huespedes.length,
+    reservas: {
+      activas: activas.length,
+      checkins_hoy: activas.filter((r) => r.fecha_checkin === fecha).length,
+      checkouts_hoy: activas.filter((r) => r.fecha_checkout === fecha).length,
+    },
+    pendientes,
+    entregados,
+    total_entregados_hoy: consumosHoy.length,
+    stock_bajo,
+    agotados,
   });
 });
 

@@ -5,4 +5,3 @@ id_reserva,id_huesped,habitacion,fecha_checkin,fecha_checkout,estado,incluye_des
 1004,4,102,2026-08-04,2026-08-08,Activa,0,1,1
 1005,5,208,2026-08-01,2026-08-03,Finalizada,1,1,1
 1006,6,310,2026-08-04,2026-08-09,Activa,1,1,1
-1007,9,217,2026-08-05,2026-08-05,Activa,1,1,1

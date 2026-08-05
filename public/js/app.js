@@ -4,12 +4,14 @@
 
 const App = (() => {
   const TITULOS = {
-    inicio: 'Inicio',
-    moduloA: 'Módulo A — Validación de Huéspedes y Reservas',
-    moduloB: 'Módulo B — Comandas e Inventario',
-    moduloC: 'Módulo C — Financiero y Reportes',
-    reservas: 'Reservas y Usuarios',
+    dashboard: 'Panel de Control',
+    reservas: 'Reservas',
+    comandas: 'Comandas',
+    inventario: 'Inventario',
+    reportes: 'Financiero y Reportes',
   };
+
+  const VISTAS_KIOSCO = ['dashboard', 'reservas', 'comandas'];
 
   let sesion = null;
 
@@ -32,7 +34,7 @@ const App = (() => {
     const btnNueva = document.getElementById('btn-nueva-reserva');
     btnNueva.addEventListener('click', () => abrirModal('modal-reserva', true));
 
-    // Turnero en TV (admin)
+    // Turnero en TV (admin y kiosco)
     document.getElementById('btn-turnero').addEventListener('click', () => {
       window.open('turnero.html', '_blank');
     });
@@ -121,7 +123,7 @@ const App = (() => {
     document.getElementById('user-avatar').textContent = (sesion.nombre || '?').charAt(0).toUpperCase();
 
     aplicarRol(sesion.rol);
-    mostrarVista('inicio');
+    mostrarVista('dashboard');
   }
 
   function mostrarLogin() {
@@ -132,21 +134,21 @@ const App = (() => {
 
   function aplicarRol(rol) {
     const esAdmin = rol === 'admin';
-    const esKiosco = rol === 'kiosco';
 
+    // Elementos exclusivos de administrador (nav, botones, tarjetas)
     document.querySelectorAll('.solo-admin').forEach((el) => {
       el.classList.toggle('hidden', !esAdmin);
     });
 
-    // Solo Inicio (y Módulo A) en el menú para admin; kiosco solo ve Inicio
+    // Navegación: admin ve todo; kiosco ve Panel, Reservas y Comandas
     document.querySelectorAll('.nav-item').forEach((el) => {
       const v = el.getAttribute('data-view');
-      el.classList.toggle('hidden', !(esAdmin || v === 'inicio'));
+      el.classList.toggle('hidden', !(esAdmin || VISTAS_KIOSCO.includes(v)));
     });
 
     // Turnero: visible para admin y kiosco
     const btnTurnero = document.getElementById('btn-turnero');
-    if (btnTurnero) btnTurnero.classList.toggle('hidden', !(esAdmin || esKiosco));
+    if (btnTurnero) btnTurnero.classList.toggle('hidden', !(esAdmin || rol === 'kiosco'));
 
     if (!esAdmin) {
       abrirModal('modal-reserva', false);
@@ -156,9 +158,9 @@ const App = (() => {
   /* ---------- Navegación ---------- */
 
   function mostrarVista(nombre) {
-    // Solo los administradores pueden abrir módulos/operaciones; el kiosco solo ve Inicio
-    if (sesion && sesion.rol !== 'admin' && nombre !== 'inicio') {
-      nombre = 'inicio';
+    // El kiosco no puede abrir vistas que no le corresponden
+    if (sesion && sesion.rol !== 'admin' && !VISTAS_KIOSCO.includes(nombre)) {
+      nombre = 'dashboard';
     }
 
     document.querySelectorAll('.view').forEach((v) => v.classList.add('hidden'));
@@ -172,10 +174,14 @@ const App = (() => {
     const titulo = document.getElementById('page-title');
     if (titulo && TITULOS[nombre]) titulo.textContent = TITULOS[nombre];
 
-    if (nombre === 'moduloA') ModuloA.refrescarVista();
-    if (nombre === 'moduloB') ModuloB.refrescar();
-    if (nombre === 'moduloC') ModuloC.refrescar();
-    if (nombre === 'reservas') ReservasAdmin.refrescar();
+    if (nombre === 'dashboard') Dashboard.refrescar();
+    if (nombre === 'reservas') {
+      ModuloA.refrescarVista();
+      if (sesion && sesion.rol === 'admin') ReservasAdmin.refrescar();
+    }
+    if (nombre === 'comandas') Comandas.refrescar();
+    if (nombre === 'inventario') Inventario.refrescar();
+    if (nombre === 'reportes') ModuloC.refrescar();
   }
 
   /* ---------- Reloj ---------- */
@@ -351,9 +357,9 @@ const App = (() => {
       abrirModal('modal-reserva', false);
       document.getElementById('form-reserva').reset();
 
-      // Ir al Módulo A y mostrar la reserva recién creada
-      mostrarVista('moduloA');
-      ModuloA.buscarExterno('reserva', resp.reserva.id_reserva);
+      // Ir a Reservas y mostrar la reserva recién creada
+      mostrarVista('reservas');
+      ModuloA.buscarExterno(resp.reserva.id_reserva);
     } catch (err) {
       App.mostrarToast(err.message, 'error');
     } finally {

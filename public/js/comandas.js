@@ -1,16 +1,15 @@
 /* ============================================================
-   Módulo B — Comandas e Inventario
-   - Registro de pedidos (mesero + mesa/huésped + platos)
+   Comandas — registro de pedidos y comandas del día
+   - Registro de pedidos (responsable + mesa/huésped + platos)
    - Descuento automático de stock
-   - Gestión de inventario y comandas del día
+   - Listado y acciones (entregar / cancelar)
    ============================================================ */
 
-const ModuloB = (() => {
+const Comandas = (() => {
   const state = {
     platos: [],
     meseros: [],
     mesas: [],
-    inventario: [],
     comandas: [],
     seleccion: {}, // id_plato -> cantidad
     catActiva: 'Todas',
@@ -18,7 +17,7 @@ const ModuloB = (() => {
 
   function init() {
     // Pestañas
-    document.getElementById('moduloB-tabs').addEventListener('click', (e) => {
+    document.getElementById('comanda-tabs').addEventListener('click', (e) => {
       const btn = e.target.closest('.tab');
       if (!btn) return;
       activarTab(btn.dataset.tab);
@@ -59,14 +58,6 @@ const ModuloB = (() => {
     // Registrar comanda
     document.getElementById('btn-registrar-comanda').addEventListener('click', registrarComanda);
 
-    // Inventario (delegación)
-    document.getElementById('tabla-inventario').addEventListener('click', (e) => {
-      const btn = e.target.closest('.btn-actualizar-stock');
-      if (!btn) return;
-      const input = document.getElementById('stock-input-' + btn.dataset.id);
-      ajustarStock(btn.dataset.id, input.value);
-    });
-
     // Comandas (delegación)
     document.getElementById('tabla-comandas').addEventListener('click', (e) => {
       const btn = e.target.closest('[data-accion]');
@@ -84,17 +75,15 @@ const ModuloB = (() => {
 
   async function refrescar() {
     try {
-      const [meseros, mesas, platos, inventario, comandas] = await Promise.all([
+      const [meseros, mesas, platos, comandas] = await Promise.all([
         Api.listarMeseros(),
         Api.listarMesas(),
         Api.listarPlatos(),
-        Api.listarInventario(),
         Api.listarComandas(''),
       ]);
       state.meseros = meseros.meseros;
       state.mesas = mesas.mesas;
       state.platos = platos.platos;
-      state.inventario = inventario.inventario;
       state.comandas = comandas.comandas;
 
       llenarMeseroSelect();
@@ -102,7 +91,6 @@ const ModuloB = (() => {
       renderFiltros();
       renderPlatos();
       renderResumen();
-      renderInventario();
       renderComandas();
     } catch (err) {
       App.mostrarToast(err.message, 'error');
@@ -110,10 +98,10 @@ const ModuloB = (() => {
   }
 
   function activarTab(tab) {
-    document.querySelectorAll('#moduloB-tabs .tab').forEach((t) => {
+    document.querySelectorAll('#comanda-tabs .tab').forEach((t) => {
       t.classList.toggle('active', t.dataset.tab === tab);
     });
-    document.querySelectorAll('#view-moduloB .tab-pane').forEach((p) => {
+    document.querySelectorAll('#view-comandas .tab-pane').forEach((p) => {
       p.classList.toggle('hidden', p.id !== tab);
     });
   }
@@ -241,7 +229,7 @@ const ModuloB = (() => {
     }
     const id_mesero = document.getElementById('com-mesero').value;
     if (!id_mesero) {
-      App.mostrarToast('Seleccione el mesero responsable.', 'error');
+      App.mostrarToast('Seleccione el responsable.', 'error');
       return;
     }
     const tipo = document.querySelector('input[name="com-tipo"]:checked').value;
@@ -297,49 +285,6 @@ const ModuloB = (() => {
     const div = document.getElementById('comanda-error');
     div.classList.add('hidden');
     div.innerHTML = '';
-  }
-
-  /* ---------- Inventario ---------- */
-
-  function renderInventario() {
-    const cont = document.getElementById('tabla-inventario');
-    if (!state.inventario.length) {
-      cont.innerHTML = '<p class="sin-datos">No hay productos registrados.</p>';
-      return;
-    }
-    const filas = state.inventario.map((p) => {
-      const cls = p.estado === 'Agotado' ? 'badge-no' : p.estado === 'Bajo' ? 'badge-warn' : 'badge-ok';
-      return `
-        <tr>
-          <td><strong>${esc(p.nombre)}</strong></td>
-          <td>${esc(p.unidad)}</td>
-          <td>
-            <input type="number" id="stock-input-${esc(p.id)}" class="stock-input" value="${esc(p.stock)}" min="0" step="0.01" />
-          </td>
-          <td>${esc(p.stock_minimo)}</td>
-          <td><span class="badge ${cls}">${p.estado}</span></td>
-          <td><button type="button" class="btn btn-secondary btn-sm btn-actualizar-stock" data-id="${esc(p.id)}">Actualizar</button></td>
-        </tr>`;
-    }).join('');
-    cont.innerHTML = `<div class="table-wrap"><table>
-      <thead><tr><th>Producto</th><th>Unidad</th><th>Stock</th><th>Stock mínimo</th><th>Estado</th><th></th></tr></thead>
-      <tbody>${filas}</tbody>
-    </table></div>`;
-  }
-
-  async function ajustarStock(id, valor) {
-    const v = parseFloat(valor);
-    if (isNaN(v) || v < 0) {
-      App.mostrarToast('Ingrese un stock válido.', 'error');
-      return;
-    }
-    try {
-      const resp = await Api.ajustarStock(id, v);
-      App.mostrarToast(resp.message, 'success');
-      await refrescar();
-    } catch (err) {
-      App.mostrarToast(err.message, 'error');
-    }
   }
 
   /* ---------- Comandas del día ---------- */
@@ -419,4 +364,4 @@ const ModuloB = (() => {
   return { init, refrescar };
 })();
 
-document.addEventListener('DOMContentLoaded', ModuloB.init);
+document.addEventListener('DOMContentLoaded', Comandas.init);

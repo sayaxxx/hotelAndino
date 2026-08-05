@@ -1,19 +1,20 @@
 id,nombre,unidad,stock,stock_minimo
-1,Jugo de naranja,unidad,40,10
-2,Café,unidad,80,20
+1,Jugo de naranja,unidad,38,10
 3,Leche,litro,30,8
-4,Pan de yuca,unidad,48,15
-5,Huevo,unidad,118,30
+4,Pan de yuca,unidad,46,15
+5,Huevo,unidad,116,30
 6,Avena,kg,10,3
-7,Pollo,kg,14.75,4
-8,Papa,kg,19.85,5
+7,Pollo,kg,14.5,4
+8,Papa,kg,19.7,5
 9,Tomate,kg,12,3
-10,Cebolla,kg,10,2
+10,Cebolla,kg,1,2
 11,Arroz,kg,25,6
 12,Carne de res,kg,14,4
-13,Lechuga,kg,7.9,2
+13,Lechuga,kg,7.8,2
 14,Frijoles,kg,18,5
 15,Aguacate,kg,6,2
 16,Plátano,kg,10,3
 17,Granola,kg,8,2
-18,Queso,kg,8.95,3
+18,Queso,kg,8.9,3
+19,Pechugas,kg,10,5
+20,Café,kg,80,50

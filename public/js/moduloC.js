@@ -54,7 +54,7 @@ const ModuloC = (() => {
     document.querySelectorAll('#moduloC-tabs .tab').forEach((t) => {
       t.classList.toggle('active', t.dataset.tab === tab);
     });
-    document.querySelectorAll('#view-moduloC .tab-pane').forEach((p) => {
+    document.querySelectorAll('#view-reportes .tab-pane').forEach((p) => {
       p.classList.toggle('hidden', p.id !== tab);
     });
   }

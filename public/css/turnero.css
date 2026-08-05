@@ -22,9 +22,36 @@ html, body {
 }
 
 body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Poppins', 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: var(--fondo);
   color: var(--texto);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+h1, h2 {
+  font-family: 'Poppins', 'Inter', sans-serif;
+  font-weight: 800;
+}
+
+h1, h2 { font-weight: 800; }
+
+h1, h2 {
+  font-family: 'Poppins', 'Inter', sans-serif;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+h1, h2 {
+  font-family: 'Poppins', 'Inter', sans-serif;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+h1, h2 {
+  font-family: 'Poppins', 'Inter', sans-serif;
+  font-weight: 800;
+  letter-spacing: 1px;
 }
 
 .hidden { display: none !important; }

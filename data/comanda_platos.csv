@@ -2,3 +2,8 @@ id,id_comanda,id_plato,cantidad,subtotal,estado
 1,1,3,1,5000,Registrada
 2,1,4,1,8000,Registrada
 3,1,7,1,15000,Registrada
+4,2,3,1,5000,Registrada
+5,2,4,1,8000,Registrada
+6,2,7,1,15000,Registrada
+7,3,1,1,3000,Registrada
+8,4,1,1,3000,Registrada

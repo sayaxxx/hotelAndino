@@ -4,22 +4,45 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hotel Andino S.A.S. — Sistema de Gestión</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
   <!-- ============ PANTALLA DE LOGIN ============ -->
   <div id="login-screen" class="login-screen">
-    <div class="login-card">
-      <div class="login-logo">A</div>
-      <h1 class="login-title">Hotel Andino</h1>
-      <p class="login-sub">S.A.S. — Sistema de Gestión</p>
-      <form id="form-login" autocomplete="off">
-        <input type="text" id="login-usuario" placeholder="Usuario" />
-        <input type="password" id="login-password" placeholder="Contraseña" />
-        <button type="submit" class="btn btn-primary btn-block" id="btn-login">Ingresar</button>
-      </form>
-      <p id="login-error" class="login-error hidden"></p>
-      <p class="login-hint">Demo: admin/admin123 · kiosco/kiosco123</p>
+    <div class="login-wrap">
+      <section class="login-brand">
+        <div class="login-logo">A</div>
+        <h1 class="login-title">Hotel Andino</h1>
+        <p class="login-sub">S.A.S. — Sistema de Gestión Hotelera Integral</p>
+        <p class="login-welcome">
+          Bienvenido. Este sistema centraliza la operación del hotel: reservas y validación
+          de huéspedes, comandas del restaurante, inventario, flujo de caja, reportes y el
+          turnero digital de la cafetería con reconocimiento facial.
+        </p>
+        <ul class="login-features">
+          <li><span class="feat-dot"></span> Validación de huéspedes y reservas al instante</li>
+          <li><span class="feat-dot"></span> Turnero digital con reconocimiento facial</li>
+          <li><span class="feat-dot"></span> Comandas, inventario y flujo de caja</li>
+          <li><span class="feat-dot"></span> Reportes operativos y financieros del día</li>
+        </ul>
+      </section>
+
+      <section class="login-panel">
+        <div class="login-card">
+          <h2>Iniciar sesión</h2>
+          <p class="login-card-sub">Ingrese sus credenciales para continuar</p>
+          <form id="form-login" autocomplete="off">
+            <input type="text" id="login-usuario" placeholder="Usuario" />
+            <input type="password" id="login-password" placeholder="Contraseña" />
+            <button type="submit" class="btn btn-primary btn-block" id="btn-login">Ingresar</button>
+          </form>
+          <p id="login-error" class="login-error hidden"></p>
+          <p class="login-hint">Demo: admin/admin123 · kiosco/kiosco123</p>
+        </div>
+      </section>
     </div>
   </div>
 
@@ -37,35 +60,31 @@
       <nav class="nav">
         <span class="nav-section">Menú principal</span>
 
-        <button class="nav-item" data-view="inicio">
-          <span class="nav-icon">&#9632;</span>
-          <span class="nav-label">Inicio</span>
+        <button class="nav-item" data-view="dashboard">
+          <span class="nav-dot nav-dot-teal"></span>
+          <span class="nav-label">Panel de Control</span>
         </button>
 
         <span class="nav-section">Operaciones</span>
 
-        <button class="nav-item" data-view="moduloA">
-          <span class="nav-icon">&#9679;</span>
-          <span class="nav-label">Validación de Huéspedes</span>
-          <span class="nav-badge">A</span>
+        <button class="nav-item" data-view="reservas">
+          <span class="nav-dot nav-dot-teal"></span>
+          <span class="nav-label">Reservas</span>
         </button>
 
-        <button class="nav-item solo-admin hidden" data-view="reservas">
-          <span class="nav-icon">&#9679;</span>
-          <span class="nav-label">Reservas y Usuarios</span>
-          <span class="nav-badge">R</span>
+        <button class="nav-item" data-view="comandas">
+          <span class="nav-dot nav-dot-teal"></span>
+          <span class="nav-label">Comandas</span>
         </button>
 
-        <button class="nav-item solo-admin hidden" data-view="moduloB">
-          <span class="nav-icon">&#9679;</span>
-          <span class="nav-label">Comandas e Inventario</span>
-          <span class="nav-badge">B</span>
+        <button class="nav-item solo-admin hidden" data-view="inventario">
+          <span class="nav-dot nav-dot-gold"></span>
+          <span class="nav-label">Inventario</span>
         </button>
 
-        <button class="nav-item solo-admin hidden" data-view="moduloC">
-          <span class="nav-icon">&#9679;</span>
+        <button class="nav-item solo-admin hidden" data-view="reportes">
+          <span class="nav-dot nav-dot-gold"></span>
           <span class="nav-label">Financiero y Reportes</span>
-          <span class="nav-badge">C</span>
         </button>
       </nav>
 
@@ -85,73 +104,57 @@
     <!-- ============ CONTENIDO ============ -->
     <main class="main">
       <header class="topbar">
-        <h1 id="page-title">Inicio</h1>
+        <h1 id="page-title">Panel de Control</h1>
         <div class="topbar-right">
           <button class="btn btn-secondary hidden" id="btn-turnero">
             <span class="btn-icon">&#128265;</span> Turnero
           </button>
-          <button class="btn btn-secondary solo-admin hidden" id="btn-nueva-reserva">
+          <button class="btn btn-primary solo-admin hidden" id="btn-nueva-reserva">
             <span class="btn-icon">&#43;</span> Nueva reserva
           </button>
           <span id="today-date" class="today-date"></span>
         </div>
       </header>
 
-      <!-- ======= VISTA: INICIO ======= -->
-      <section id="view-inicio" class="view">
-        <div class="grid-3">
-          <article class="card card-module">
-            <div class="card-module-tag tag-a">Módulo A</div>
-            <h3>Validación de Huéspedes y Reservas</h3>
-            <p>Busca huéspedes por documento o reserva, valida su plan de comidas y controla los consumos del día.</p>
-            <button class="btn btn-primary" data-view="moduloA">Ir al módulo</button>
+      <!-- ======= VISTA: PANEL DE CONTROL ======= -->
+      <section id="view-dashboard" class="view hidden">
+        <div id="dashboard-stats" class="resumen-tarjetas"></div>
+        <div class="grid-2">
+          <article class="card solo-admin hidden" id="asistente-card">
+            <h2 class="card-title">Asistente IA — Resumen del día</h2>
+            <div id="asistente" class="asistente"></div>
           </article>
-          <article class="card card-module solo-admin hidden">
-            <div class="card-module-tag tag-b">Módulo B</div>
-            <h3>Comandas e Inventario</h3>
-            <p>Registra pedidos por mesero y mesa, con descuento automático de stock.</p>
-            <button class="btn btn-secondary" data-view="moduloB">Ir al módulo</button>
-          </article>
-          <article class="card card-module solo-admin hidden">
-            <div class="card-module-tag tag-c">Módulo C</div>
-            <h3>Financiero y Reportes</h3>
-            <p>Flujo de caja diario y reporte operativo de comidas entregadas. Análisis con Python.</p>
-            <button class="btn btn-secondary" data-view="moduloC">Ir al módulo</button>
+          <article class="card card-module" id="bienvenida-card">
+            <h3 id="bienvenida-titulo">Bienvenido</h3>
+            <p id="bienvenida-texto">Elija una opción en el menú lateral para comenzar a trabajar.</p>
           </article>
         </div>
       </section>
 
-      <!-- ======= VISTA: MÓDULO A ======= -->
-      <section id="view-moduloA" class="view hidden">
+      <!-- ======= VISTA: RESERVAS (búsqueda + administración) ======= -->
+      <section id="view-reservas" class="view hidden">
         <div class="card search-card">
-          <h2 class="card-title">Check-in / Búsqueda de huésped</h2>
-          <form id="form-busqueda" class="search-form" autocomplete="off">
-            <div class="field field-select">
-              <label for="buscar-tipo">Buscar por</label>
-              <select id="buscar-tipo">
-                <option value="documento">Documento</option>
-                <option value="reserva">Número de reserva</option>
-              </select>
-            </div>
-            <div class="field field-input">
-              <label for="buscar-valor">Valor</label>
-              <input id="buscar-valor" type="text" placeholder="Ej: 1023456789 o 1001" />
-            </div>
-            <button type="submit" class="btn btn-primary" id="btn-buscar">
-              <span class="btn-icon">&#128269;</span> Buscar
-            </button>
-          </form>
+          <h2 class="card-title">Buscar huésped o reserva</h2>
+          <div class="search-auto">
+            <span class="search-auto-icon">&#128269;</span>
+            <input
+              id="buscar-valor"
+              type="search"
+              class="search-auto-input"
+              placeholder="Documento, N° de reserva o nombre…"
+              autocomplete="off"
+            />
+            <span id="buscar-estado" class="search-auto-estado"></span>
+          </div>
+          <p class="tab-hint">La búsqueda es automática mientras escribe: documento, número de reserva o nombre del huésped.</p>
         </div>
 
         <div id="resultado" class="hidden">
           <!-- Contenido inyectado por moduloA.js -->
         </div>
-      </section>
 
-      <!-- ======= VISTA: RESERVAS Y USUARIOS (solo admin) ======= -->
-      <section id="view-reservas" class="view hidden">
-        <div class="card">
-          <h2 class="card-title">Filtrar reservas</h2>
+        <div class="card solo-admin hidden">
+          <h2 class="card-title">Administración de reservas y usuarios</h2>
           <form id="form-filtro-reservas" class="search-form" autocomplete="off">
             <div class="field">
               <label for="filtro-desde">Desde</label>
@@ -161,31 +164,25 @@
               <label for="filtro-hasta">Hasta</label>
               <input id="filtro-hasta" type="date" />
             </div>
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-secondary">
               <span class="btn-icon">&#128269;</span> Filtrar
             </button>
             <button type="button" class="btn btn-secondary" id="btn-limpiar-filtro">Limpiar</button>
           </form>
           <p class="tab-hint" id="filtro-resumen"></p>
-        </div>
-
-        <div class="card">
-          <h2 class="card-title">Reservas registradas</h2>
           <div id="tabla-reservas"></div>
         </div>
       </section>
 
-      <!-- ======= VISTA: MÓDULO B ======= -->
-      <section id="view-moduloB" class="view hidden">
+      <!-- ======= VISTA: COMANDAS ======= -->
+      <section id="view-comandas" class="view hidden">
         <div class="card tabs-card">
-          <div class="tabs" id="moduloB-tabs">
+          <div class="tabs" id="comanda-tabs">
             <button class="tab active" data-tab="tab-comanda">Registrar comanda</button>
-            <button class="tab" data-tab="tab-inventario">Inventario</button>
             <button class="tab" data-tab="tab-comandas">Comandas del día</button>
           </div>
         </div>
 
-        <!-- Registro de comanda -->
         <div id="tab-comanda" class="tab-pane">
           <div class="comanda-layout">
             <div class="card">
@@ -198,7 +195,7 @@
               <h2 class="card-title">Detalles de la comanda</h2>
               <div class="form-grid">
                 <div class="field">
-                  <label for="com-mesero">Mesero responsable *</label>
+                  <label for="com-mesero">Responsable *</label>
                   <select id="com-mesero"><option value="">Seleccionar...</option></select>
                 </div>
                 <div class="field">
@@ -225,20 +222,11 @@
 
               <div class="resumen-total">Total: <strong id="resumen-total">$0</strong></div>
               <button type="button" class="btn btn-primary btn-block" id="btn-registrar-comanda" disabled>Registrar comanda</button>
+              <p class="tab-hint">La comanda es un servicio adicional y se cobra (descuenta automáticamente el stock del inventario).</p>
             </div>
           </div>
         </div>
 
-        <!-- Inventario -->
-        <div id="tab-inventario" class="tab-pane hidden">
-          <div class="card">
-            <h2 class="card-title">Inventario de productos</h2>
-            <p class="tab-hint">Los stocks se descuentan automáticamente al registrar comandas. Edite la cantidad y presione Actualizar para ajustar manualmente.</p>
-            <div id="tabla-inventario"></div>
-          </div>
-        </div>
-
-        <!-- Comandas del día -->
         <div id="tab-comandas" class="tab-pane hidden">
           <div class="card">
             <h2 class="card-title">Comandas del día</h2>
@@ -247,8 +235,22 @@
         </div>
       </section>
 
-      <!-- ======= VISTA: MÓDULO C ======= -->
-      <section id="view-moduloC" class="view hidden">
+      <!-- ======= VISTA: INVENTARIO (solo admin) ======= -->
+      <section id="view-inventario" class="view hidden">
+        <div class="card">
+          <div class="inv-head">
+            <h2 class="card-title">Inventario de productos</h2>
+            <button type="button" class="btn btn-primary" id="btn-nuevo-producto">
+              <span class="btn-icon">&#43;</span> Nuevo producto
+            </button>
+          </div>
+          <p class="tab-hint">Los stocks se descuentan automáticamente al registrar comandas. Edite la cantidad y presione Actualizar para ajustar manualmente.</p>
+          <div id="tabla-inventario"></div>
+        </div>
+      </section>
+
+      <!-- ======= VISTA: FINANCIERO Y REPORTES (solo admin) ======= -->
+      <section id="view-reportes" class="view hidden">
         <div class="card tabs-card">
           <div class="tabs" id="moduloC-tabs">
             <button class="tab active" data-tab="tab-caja">Flujo de caja</button>
@@ -256,7 +258,6 @@
           </div>
         </div>
 
-        <!-- Flujo de caja -->
         <div id="tab-caja" class="tab-pane">
           <div class="resumen-tarjetas" id="caja-resumen"></div>
 
@@ -290,7 +291,7 @@
                 <label for="caja-valor">Valor ($) *</label>
                 <input id="caja-valor" type="number" min="0" step="100" placeholder="0" />
               </div>
-              <button type="submit" class="btn btn-primary">Registrar</button>
+              <button type="submit" class="btn btn-primary">Procesar cobro</button>
             </form>
           </div>
 
@@ -300,7 +301,6 @@
           </div>
         </div>
 
-        <!-- Reporte operativo -->
         <div id="tab-reporte" class="tab-pane hidden">
           <div class="resumen-tarjetas" id="reporte-resumen"></div>
 
@@ -412,13 +412,50 @@
     </div>
   </div>
 
+  <!-- ============ MODAL: NUEVO PRODUCTO (solo admin) ============ -->
+  <div id="modal-producto" class="modal hidden">
+    <div class="modal-backdrop" data-cerrar-modal-producto></div>
+    <div class="modal-box modal-box-sm">
+      <div class="modal-head">
+        <h2>Nuevo producto</h2>
+        <button type="button" class="modal-close" data-cerrar-modal-producto aria-label="Cerrar">&times;</button>
+      </div>
+      <form id="form-producto" autocomplete="off">
+        <div class="form-grid">
+          <div class="field">
+            <label for="prod-nombre">Nombre *</label>
+            <input id="prod-nombre" type="text" placeholder="Ej: Café" required />
+          </div>
+          <div class="field">
+            <label for="prod-unidad">Unidad</label>
+            <input id="prod-unidad" type="text" placeholder="Ej: kg, litro, unidad" />
+          </div>
+          <div class="field">
+            <label for="prod-stock">Stock *</label>
+            <input id="prod-stock" type="number" min="0" step="0.01" placeholder="0" required />
+          </div>
+          <div class="field">
+            <label for="prod-stock-min">Stock mínimo *</label>
+            <input id="prod-stock-min" type="number" min="0" step="0.01" placeholder="0" required />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" data-cerrar-modal-producto>Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar producto</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div id="toast" class="toast hidden"></div>
 
   <script src="js/api.js"></script>
   <script src="js/app.js"></script>
   <script src="js/moduloA.js"></script>
-  <script src="js/moduloB.js"></script>
+  <script src="js/comandas.js"></script>
+  <script src="js/inventario.js"></script>
   <script src="js/moduloC.js"></script>
   <script src="js/reservasAdmin.js"></script>
+  <script src="js/dashboard.js"></script>
 </body>
 </html>
