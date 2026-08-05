@@ -8,6 +8,7 @@ const App = (() => {
     moduloA: 'Módulo A — Validación de Huéspedes y Reservas',
     moduloB: 'Módulo B — Comandas e Inventario',
     moduloC: 'Módulo C — Financiero y Reportes',
+    reservas: 'Reservas y Usuarios',
   };
 
   let sesion = null;
@@ -30,6 +31,11 @@ const App = (() => {
     // Modal nueva reserva (admin)
     const btnNueva = document.getElementById('btn-nueva-reserva');
     btnNueva.addEventListener('click', () => abrirModal('modal-reserva', true));
+
+    // Turnero en TV (admin)
+    document.getElementById('btn-turnero').addEventListener('click', () => {
+      window.open('turnero.html', '_blank');
+    });
     document.querySelectorAll('[data-cerrar-modal]').forEach((el) => {
       el.addEventListener('click', () => abrirModal('modal-reserva', false));
     });
@@ -110,7 +116,8 @@ const App = (() => {
 
     // Info del usuario
     document.getElementById('user-nombre').textContent = sesion.nombre;
-    document.getElementById('user-rol').textContent = sesion.rol === 'admin' ? 'Administrador' : 'Mesero';
+    document.getElementById('user-rol').textContent =
+      sesion.rol === 'admin' ? 'Administrador' : sesion.rol === 'kiosco' ? 'Kiosco' : sesion.rol;
     document.getElementById('user-avatar').textContent = (sesion.nombre || '?').charAt(0).toUpperCase();
 
     aplicarRol(sesion.rol);
@@ -125,9 +132,22 @@ const App = (() => {
 
   function aplicarRol(rol) {
     const esAdmin = rol === 'admin';
+    const esKiosco = rol === 'kiosco';
+
     document.querySelectorAll('.solo-admin').forEach((el) => {
       el.classList.toggle('hidden', !esAdmin);
     });
+
+    // Solo Inicio (y Módulo A) en el menú para admin; kiosco solo ve Inicio
+    document.querySelectorAll('.nav-item').forEach((el) => {
+      const v = el.getAttribute('data-view');
+      el.classList.toggle('hidden', !(esAdmin || v === 'inicio'));
+    });
+
+    // Turnero: visible para admin y kiosco
+    const btnTurnero = document.getElementById('btn-turnero');
+    if (btnTurnero) btnTurnero.classList.toggle('hidden', !(esAdmin || esKiosco));
+
     if (!esAdmin) {
       abrirModal('modal-reserva', false);
     }
@@ -136,8 +156,8 @@ const App = (() => {
   /* ---------- Navegación ---------- */
 
   function mostrarVista(nombre) {
-    // Módulos B y C son solo para administradores
-    if (sesion && sesion.rol !== 'admin' && (nombre === 'moduloB' || nombre === 'moduloC')) {
+    // Solo los administradores pueden abrir módulos/operaciones; el kiosco solo ve Inicio
+    if (sesion && sesion.rol !== 'admin' && nombre !== 'inicio') {
       nombre = 'inicio';
     }
 
@@ -155,6 +175,7 @@ const App = (() => {
     if (nombre === 'moduloA') ModuloA.refrescarVista();
     if (nombre === 'moduloB') ModuloB.refrescar();
     if (nombre === 'moduloC') ModuloC.refrescar();
+    if (nombre === 'reservas') ReservasAdmin.refrescar();
   }
 
   /* ---------- Reloj ---------- */

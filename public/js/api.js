@@ -80,12 +80,44 @@ const Api = (() => {
       });
     },
 
+    /* --- Turnero (pantalla de TV en cafetería) --- */
+    listarTurnero(fecha) {
+      return request(`/api/turnero?fecha=${encodeURIComponent(fecha || '')}`);
+    },
+    turneroHistorial(fecha) {
+      return request(`/api/turnero/historial?fecha=${encodeURIComponent(fecha || '')}`);
+    },
+    turneroEstado(idHuesped, hora) {
+      return request(`/api/turnero/estado?id_huesped=${encodeURIComponent(idHuesped)}&hora=${encodeURIComponent(hora || '')}`);
+    },
+    turneroListo(id) {
+      return request(`/api/turnero/${encodeURIComponent(id)}/lista`, { method: 'POST' });
+    },
+    turneroRecogido(id) {
+      return request(`/api/turnero/${encodeURIComponent(id)}/recogido`, { method: 'POST' });
+    },
+
     /* --- Administración --- */
     crearReserva(datos) {
       return request('/api/reservas', {
         method: 'POST',
         body: JSON.stringify(datos),
       });
+    },
+
+    /* --- Administración de reservas y usuarios --- */
+    listarReservas(desde, hasta) {
+      const q = new URLSearchParams();
+      if (desde) q.set('desde', desde);
+      if (hasta) q.set('hasta', hasta);
+      const str = q.toString();
+      return request(`/api/reservas${str ? '?' + str : ''}`);
+    },
+    eliminarReserva(id) {
+      return request(`/api/reservas/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    },
+    eliminarHuesped(id) {
+      return request(`/api/huespedes/${encodeURIComponent(id)}`, { method: 'DELETE' });
     },
 
     /* --- Módulo B: comandas e inventario --- */

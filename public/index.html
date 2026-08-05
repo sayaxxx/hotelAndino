@@ -19,7 +19,7 @@
         <button type="submit" class="btn btn-primary btn-block" id="btn-login">Ingresar</button>
       </form>
       <p id="login-error" class="login-error hidden"></p>
-      <p class="login-hint">Demo: admin/admin123 · mesero1/mesero123</p>
+      <p class="login-hint">Demo: admin/admin123 · kiosco/kiosco123</p>
     </div>
   </div>
 
@@ -48,6 +48,12 @@
           <span class="nav-icon">&#9679;</span>
           <span class="nav-label">Validación de Huéspedes</span>
           <span class="nav-badge">A</span>
+        </button>
+
+        <button class="nav-item solo-admin hidden" data-view="reservas">
+          <span class="nav-icon">&#9679;</span>
+          <span class="nav-label">Reservas y Usuarios</span>
+          <span class="nav-badge">R</span>
         </button>
 
         <button class="nav-item solo-admin hidden" data-view="moduloB">
@@ -81,6 +87,9 @@
       <header class="topbar">
         <h1 id="page-title">Inicio</h1>
         <div class="topbar-right">
+          <button class="btn btn-secondary hidden" id="btn-turnero">
+            <span class="btn-icon">&#128265;</span> Turnero
+          </button>
           <button class="btn btn-secondary solo-admin hidden" id="btn-nueva-reserva">
             <span class="btn-icon">&#43;</span> Nueva reserva
           </button>
@@ -136,6 +145,33 @@
 
         <div id="resultado" class="hidden">
           <!-- Contenido inyectado por moduloA.js -->
+        </div>
+      </section>
+
+      <!-- ======= VISTA: RESERVAS Y USUARIOS (solo admin) ======= -->
+      <section id="view-reservas" class="view hidden">
+        <div class="card">
+          <h2 class="card-title">Filtrar reservas</h2>
+          <form id="form-filtro-reservas" class="search-form" autocomplete="off">
+            <div class="field">
+              <label for="filtro-desde">Desde</label>
+              <input id="filtro-desde" type="date" />
+            </div>
+            <div class="field">
+              <label for="filtro-hasta">Hasta</label>
+              <input id="filtro-hasta" type="date" />
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <span class="btn-icon">&#128269;</span> Filtrar
+            </button>
+            <button type="button" class="btn btn-secondary" id="btn-limpiar-filtro">Limpiar</button>
+          </form>
+          <p class="tab-hint" id="filtro-resumen"></p>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">Reservas registradas</h2>
+          <div id="tabla-reservas"></div>
         </div>
       </section>
 
@@ -383,5 +419,6 @@
   <script src="js/moduloA.js"></script>
   <script src="js/moduloB.js"></script>
   <script src="js/moduloC.js"></script>
+  <script src="js/reservasAdmin.js"></script>
 </body>
 </html>

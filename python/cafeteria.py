@@ -75,6 +75,7 @@ def cargar_config(args):
     config.setdefault('umbral_confianza', 85)
     config.setdefault('cooldown_seg', 60)
     config.setdefault('refresh_seg', 300)
+    config.setdefault('firma_check_seg', 10)
     if args.server:
         config['servidor'] = args.server
     if args.usuario:
@@ -104,10 +105,74 @@ def reclamo_facial(server, token, id_huesped, hora):
         return {'ok': False, 'estado': 'error', 'message': 'Error al contactar el servidor: ' + str(e)}
 
 
+def consultar_estado(server, token, id_huesped, hora):
+    """Consulta si el huésped ya recibió la comida de la ventana vigente (lectura)."""
+    try:
+        resp = requests.get(
+            server.rstrip('/') + '/api/turnero/estado',
+            params={'id_huesped': id_huesped, 'hora': hora},
+            headers={'Authorization': 'Bearer ' + token}, timeout=10,
+        )
+        if resp.status_code == 404:
+            return {'ok': False, 'estado': 'no_encontrado', 'message': 'Huésped no registrado'}
+        resp.raise_for_status()
+        return resp.json()
+    except requests.RequestException as e:
+        return {'ok': False, 'estado': 'error', 'message': 'Error al contactar el servidor: ' + str(e)}
+
+
+def sonido_aprobacion():
+    """Tonada de aprobación cuando se registra una comida."""
+    try:
+        import winsound
+        winsound.Beep(880, 130)
+        winsound.Beep(1318, 260)
+    except Exception:
+        print('\a', end='', flush=True)
+
+
+def sonido_error():
+    """Sonido cuando el reclamo es rechazado."""
+    try:
+        import winsound
+        winsound.Beep(220, 320)
+    except Exception:
+        print('\a', end='', flush=True)
+
+
+def firma_rostros(server, token):
+    """Firma del conjunto de rostros del servidor (para detectar altas/bajas).
+
+    Devuelve None si el servidor no responde; el kiosco entonces no re-entrena.
+    """
+    try:
+        resp = requests.get(
+            server.rstrip('/') + '/api/rostros/firma',
+            headers={'Authorization': 'Bearer ' + token}, timeout=10,
+        )
+        resp.raise_for_status()
+        return resp.json().get('firma')
+    except requests.RequestException:
+        return None
+
+
+def borrar_modelo():
+    """Elimina el modelo entrenado para que se re-genere desde cero."""
+    for f in ('modelo_lbph.yml', 'labels.json'):
+        ruta = os.path.join(MODELO_DIR, f)
+        if os.path.exists(ruta):
+            os.remove(ruta)
+
+
 def preparar_modelo(server, token, config):
     """Descarga los rostros del servidor y reentrena el modelo LBPH."""
     ids = sincronizar_rostros(server, token)
     if not ids:
+        # Sin rostros: limpiar el modelo para que no reconozca a nadie.
+        try:
+            borrar_modelo()
+        except Exception:
+            pass
         return False, 'El servidor no tiene rostros registrados todavia.'
     resultado = entrenar()
     return True, (
@@ -234,6 +299,7 @@ def modo_kiosco(config):
         recognizer, labels = cargar_modelo()
         print(mensaje_modelo)
     else:
+        recognizer, labels = None, None
         print('AVISO: ' + mensaje_modelo)
     nombres = mapa_nombres_rostros()
 
@@ -251,9 +317,14 @@ def modo_kiosco(config):
     ultimo_estado = 'Esperando rostro...'
     ultimo_color = COLOR_NEUTRO
     ultimo_refresh = time.time()
+    ultimo_firma_check = time.time()
     ultimo_click = 0.0
     cooldown = int(config['cooldown_seg'])
     refresh = int(config['refresh_seg'])
+    firma_check = int(config['firma_check_seg'])
+    firma_actual = firma_rostros(server, token)
+    estados = {}          # id_huesped -> {'tiempo': t, 'datos': info}
+    cooldown_estado = 3   # segundos entre consultas de estado por huésped
 
     print('Cámara activa. Presione Q para salir.')
     try:
@@ -287,43 +358,66 @@ def modo_kiosco(config):
                     cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 210), 2)
                     cv2.putText(frame, 'NO SE RECONOCE ROSTRO', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 210), 2, cv2.LINE_AA)
 
-            # --- Estado de los botones: se habilita el de la ventana vigente solo si hay rostro reconocido ---
+            # --- Estado del huésped: ¿ya recibió la comida del día? ---
+            info = None
+            if id_h and ventana:
+                ahora = time.time()
+                prev = estados.get(id_h)
+                if prev and ahora - prev['tiempo'] < cooldown_estado:
+                    info = prev['datos']
+                else:
+                    info = consultar_estado(server, token, id_h, hhmm)
+                    estados[id_h] = {'tiempo': ahora, 'datos': info}
+
+            # --- Botones: solo el de la ventana vigente, y solo si el huésped NO ha recibido la comida ---
+            disponible = bool(info) and info.get('estado') == 'disponible'
             for b in ui['botones']:
-                b['activo'] = bool(id_h) and bool(ventana) and b['servicio'] == ventana['servicio']
+                b['activo'] = disponible and b['servicio'] == (ventana or {}).get('servicio')
 
             # --- Mensaje de estado principal ---
-            if id_h and ventana:
-                nombre = nombres.get(id_h) or f'Huesped {id_h}'
-                ultimo_estado = f'Huesped: {nombre}  ·  Pulse "{ventana["servicio"].upper()}" para registrar'
-                ultimo_color = COLOR_VERDE
-            elif id_h and not ventana:
-                nombre = nombres.get(id_h) or f'Huesped {id_h}'
-                ultimo_estado = f'Huesped: {nombre}  ·  Fuera del horario de servicio'
-                ultimo_color = COLOR_GRIS
-            elif box and not id_h:
-                ultimo_estado = 'NO SE RECONOCE ROSTRO'
-                ultimo_color = COLOR_ROJO
-            elif not box:
+            nombre = nombres.get(id_h) if id_h else None
+            if not box:
                 ultimo_estado = 'Esperando rostro...'
                 ultimo_color = COLOR_NEUTRO
-
-            # --- Procesar clic en un botón habilitado ---
-            if ui['click'] and id_h and ventana and ui['click'] == ventana['servicio']:
-                ui['click'] = None
-                ahora = time.time()
-                if ahora - ultimo_click < 3:
-                    ultimo_estado = 'Procesando... espere un momento.'
-                else:
-                    ultimo_click = ahora
-                    res = reclamo_facial(server, token, id_h, hhmm)
-                    if res.get('ok'):
-                        ultimo_estado = res.get('message', 'Comida registrada.')
-                        ultimo_color = ESTADO_COLOR.get(res['estado'], COLOR_VERDE)
-                    else:
-                        ultimo_estado = res.get('message', 'No se pudo registrar.')
-                        ultimo_color = ESTADO_COLOR.get(res['estado'], COLOR_ROJO)
+            elif not id_h:
+                ultimo_estado = 'NO SE RECONOCE ROSTRO'
+                ultimo_color = COLOR_ROJO
+            elif not ventana:
+                ultimo_estado = f'Huesped: {nombre}  ·  Fuera del horario de servicio'
+                ultimo_color = COLOR_GRIS
+            elif not info:
+                ultimo_estado = f'Huesped: {nombre}  ·  Verificando la comida del día...'
+                ultimo_color = COLOR_GRIS
+            elif info.get('estado') == 'disponible':
+                ultimo_estado = f'{nombre}  ·  Pulse "{ventana["servicio"].upper()}" para registrar'
+                ultimo_color = COLOR_VERDE
+            elif info.get('estado') == 'ya_reclamado':
+                ultimo_estado = info.get('message', f'{nombre} ya recibió el {ventana["servicio"].lower()} hoy.')
+                ultimo_color = COLOR_AMARILLO
             else:
+                ultimo_estado = info.get('message', 'No se pudo verificar el estado.')
+                ultimo_color = ESTADO_COLOR.get(info.get('estado'), COLOR_ROJO)
+
+            # --- Procesar clic en el botón habilitado ---
+            if ui['click']:
+                click_servicio = ui['click']
                 ui['click'] = None
+                if disponible and click_servicio == ventana['servicio']:
+                    ahora = time.time()
+                    if ahora - ultimo_click < 3:
+                        ultimo_estado = 'Procesando... espere un momento.'
+                    else:
+                        ultimo_click = ahora
+                        res = reclamo_facial(server, token, id_h, hhmm)
+                        if res.get('ok'):
+                            sonido_aprobacion()
+                            ultimo_estado = res.get('message', 'Comida registrada.')
+                            ultimo_color = ESTADO_COLOR.get(res['estado'], COLOR_VERDE)
+                            estados.pop(id_h, None)  # al volver a consultar será "ya recibió"
+                        else:
+                            sonido_error()
+                            ultimo_estado = res.get('message', 'No se pudo registrar.')
+                            ultimo_color = ESTADO_COLOR.get(res['estado'], COLOR_ROJO)
 
             # --- Recarga del modelo cada N minutos (nuevos huéspedes) ---
             if time.time() - ultimo_refresh > refresh:
@@ -336,6 +430,26 @@ def modo_kiosco(config):
                         print('[' + time.strftime('%H:%M:%S') + '] ' + msg)
                 except Exception as e:
                     print('Error al refrescar el modelo:', e)
+
+            # --- Detección rápida de cambios en los rostros (altas/bajas) ---
+            if time.time() - ultimo_firma_check > firma_check:
+                ultimo_firma_check = time.time()
+                f = firma_rostros(server, token)
+                if f is not None and f != firma_actual:
+                    firma_actual = f
+                    print('[' + time.strftime('%H:%M:%S') + '] Cambio en los rostros, re-entrenando modelo...')
+                    try:
+                        ok2, msg = preparar_modelo(server, token, config)
+                        if ok2:
+                            recognizer, labels = cargar_modelo()
+                            nombres = mapa_nombres_rostros()
+                        else:
+                            recognizer, labels = None, None
+                            nombres = {}
+                        estados.clear()
+                        print('[' + time.strftime('%H:%M:%S') + '] ' + msg)
+                    except Exception as e:
+                        print('Error al re-entrenar el modelo:', e)
 
             dibujar_etiqueta(frame, f'{banner}   |   {hhmm}', (40, 40, 40))
             dibujar_botones(frame, ui['botones'])

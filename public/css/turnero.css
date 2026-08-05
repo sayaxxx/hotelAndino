@@ -1,0 +1,261 @@
+/* ============================================================
+   Turnero — Pantalla de TV (tema oscuro) — Hotel Andino
+   ============================================================ */
+
+:root {
+  --fondo: #0d1117;
+  --panel: #161b22;
+  --borde: #30363d;
+  --texto: #f0f6fc;
+  --texto-suave: #9aa5b1;
+  --verde: #2ea043;
+  --verde-claro: #3fb950;
+  --ambar: #d29922;
+  --rojo: #f85149;
+  --azul: #58a6ff;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+}
+
+.hidden { display: none !important; }
+
+/* ---------- Login ---------- */
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fondo);
+  z-index: 50;
+}
+
+.login-card {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 16px;
+  padding: 32px;
+  width: 360px;
+  text-align: center;
+}
+
+.login-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--verde);
+  color: #fff;
+  font-size: 34px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.login-card h1 { font-size: 22px; margin-bottom: 6px; }
+.login-card p { color: var(--texto-suave); margin-bottom: 18px; }
+
+.login-card input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: #0d1117;
+  color: var(--texto);
+  font-size: 15px;
+}
+
+.btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--verde);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn:hover { background: var(--verde-claro); }
+
+.login-error { color: var(--rojo); margin-top: 10px; font-size: 13px; min-height: 16px; }
+
+.login-hint { color: var(--texto-suave); font-size: 12px; margin-top: 12px; opacity: 0.7; }
+
+/* ---------- Pantalla turnera ---------- */
+.turnero {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 30px;
+  gap: 18px;
+}
+
+/* ---------- Cabecera ---------- */
+.turnero-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 14px;
+  border-bottom: 3px solid var(--borde);
+}
+
+.turnero-titulo h1 {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  line-height: 1.1;
+}
+
+.turnero-turno {
+  margin-top: 8px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--verde-claro);
+  letter-spacing: 1.5px;
+}
+
+.turnero-reloj { text-align: right; white-space: nowrap; }
+.turnero-reloj #tl-hora { font-size: 56px; font-weight: 800; display: block; font-variant-numeric: tabular-nums; }
+.turnero-reloj #tl-fecha { color: var(--texto-suave); font-size: 16px; text-transform: capitalize; }
+
+/* ---------- Columnas ---------- */
+.turnero-columnas {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  min-height: 0;
+}
+
+.columna {
+  background: var(--panel);
+  border: 2px solid var(--borde);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.columna h2 {
+  padding: 16px 20px;
+  font-size: 22px;
+  letter-spacing: 1px;
+  border-bottom: 2px solid var(--borde);
+}
+
+.col-preparacion h2 { background: rgba(210, 153, 34, 0.12); color: var(--ambar); }
+.col-listo h2 { background: rgba(46, 160, 67, 0.14); color: var(--verde-claro); }
+
+.turnero-lista {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-content: flex-start;
+}
+
+.sin-pedidos {
+  color: var(--texto-suave);
+  font-size: 22px;
+  text-align: center;
+  padding: 60px 0;
+}
+
+/* ---------- Filas de ticket ---------- */
+.ticket-fila {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #1b222c;
+  border: 2px solid var(--borde);
+  border-radius: 12px;
+  padding: 14px 18px;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.fila-preparacion { border-color: var(--ambar); }
+.fila-listo {
+  border-color: var(--verde);
+  box-shadow: 0 0 18px rgba(63, 185, 80, 0.35);
+  animation: listo-pulso 1.6s ease-in-out infinite;
+}
+
+@keyframes listo-pulso {
+  0%, 100% { box-shadow: 0 0 10px rgba(63, 185, 80, 0.25); }
+  50% { box-shadow: 0 0 26px rgba(63, 185, 80, 0.6); }
+}
+
+.fila-nombre {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fila-nombre .hab { color: var(--texto-suave); font-weight: 600; }
+
+.fila-numero { white-space: nowrap; }
+.num-ticket {
+  color: var(--verde-claro);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+}
+
+.fila-acciones { white-space: nowrap; }
+
+.btn-accion {
+  padding: 12px 22px;
+  border: none;
+  border-radius: 8px;
+  font-size: 20px;
+  font-weight: 800;
+  cursor: pointer;
+  color: #fff;
+}
+
+.btn-listo { background: var(--verde); }
+.btn-listo:hover { background: var(--verde-claro); }
+
+.btn-recogido { background: var(--azul); }
+.btn-recogido:hover { filter: brightness(1.15); }
+
+/* ---------- Pie ---------- */
+.turnero-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding-top: 14px;
+  border-top: 3px solid var(--borde);
+}
+
+.turnero-ultimo {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--verde-claro);
+}
+
+.turnero-conexion {
+  color: var(--texto-suave);
+  font-size: 15px;
+  white-space: nowrap;
+}

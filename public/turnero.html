@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Turnero — Hotel Andino S.A.S.</title>
+  <link rel="stylesheet" href="css/turnero.css" />
+</head>
+<body>
+  <!-- ============ LOGIN (una sola vez en la TV) ============ -->
+  <div id="turnero-login" class="login-overlay hidden">
+    <div class="login-card">
+      <div class="login-logo">A</div>
+      <h1>Turnero — Hotel Andino</h1>
+      <p>Ingrese con el usuario del kiosco para la pantalla.</p>
+      <form id="form-turnero-login" autocomplete="off">
+        <input type="text" id="tl-usuario" placeholder="Usuario" />
+        <input type="password" id="tl-password" placeholder="Contraseña" />
+        <button type="submit" class="btn">Conectar pantalla</button>
+      </form>
+      <p id="tl-error" class="login-error"></p>
+      <p class="login-hint">kiosco/kiosco123</p>
+    </div>
+  </div>
+
+  <!-- ============ PANTALLA TURNERA ============ -->
+  <div id="turnero-app" class="turnero hidden">
+    <header class="turnero-head">
+      <div class="turnero-titulo">
+        <h1>HOTEL ANDINO — SERVICIO DE RESTAURANTE</h1>
+        <p id="tl-turno" class="turnero-turno">Turno Actual: —</p>
+      </div>
+      <div class="turnero-reloj">
+        <span id="tl-hora">--:--</span>
+        <span id="tl-fecha">--</span>
+      </div>
+    </header>
+
+    <main class="turnero-columnas">
+      <section class="columna col-preparacion">
+        <h2>🔄 EN VALIDACIÓN / ATENCIÓN</h2>
+        <div id="lista-preparacion" class="turnero-lista"></div>
+      </section>
+
+      <section class="columna col-listo">
+        <h2>✅ LISTOS PARA RETIRAR</h2>
+        <div id="lista-listo" class="turnero-lista"></div>
+      </section>
+    </main>
+
+    <footer class="turnero-foot">
+      <span id="tl-ultimo" class="turnero-ultimo">📢 Último entregado: —</span>
+      <span id="tl-conexion" class="turnero-conexion">Conectando...</span>
+    </footer>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/turnero.js"></script>
+</body>
+</html>

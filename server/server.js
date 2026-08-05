@@ -59,7 +59,16 @@ function parseCsvLine(line) {
 
 function writeCsv(fileName, rows) {
   const filePath = path.join(DATA_DIR, fileName);
-  const headers = Object.keys(rows[0]).filter((h) => h !== '__line');
+  let headers;
+  if (rows.length === 0) {
+    // Conservar la cabecera del archivo si quedó vacío
+    const raw = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
+    const firstLine = raw.split(/\r?\n/)[0] || '';
+    headers = firstLine ? parseCsvLine(firstLine).map((h) => h.trim()) : [];
+    fs.writeFileSync(filePath, headers.length ? headers.join(',') + '\n' : '', 'utf8');
+    return;
+  }
+  headers = Object.keys(rows[0]).filter((h) => h !== '__line');
   const lines = [headers.join(',')];
   rows.forEach((r) => {
     lines.push(headers.map((h) => String(r[h] ?? '').replace(/,/g, ';')).join(','));
@@ -335,6 +344,125 @@ app.post('/api/reservas', requireAuth, requireAdmin, (req, res) => {
 });
 
 // ------------------------------------------------------------------
+// API: Administración de reservas y huéspedes (solo administradores)
+// ------------------------------------------------------------------
+
+// Listar reservas con su huésped. Filtro opcional por rango de fechas
+// (devuelve las estadías que coinciden con el rango indicado).
+app.get('/api/reservas', requireAuth, requireAdmin, (req, res) => {
+  const { desde, hasta } = req.query;
+  const reservas = readCsv('reservas.csv');
+  const huespedes = readCsv('huespedes.csv');
+  const consumos = readCsv('consumos.csv');
+
+  let lista = reservas.map((r) => {
+    const hp = huespedes.find((h) => h.id === r.id_huesped) || {};
+    return {
+      id_reserva: r.id_reserva,
+      id_huesped: r.id_huesped,
+      huesped: hp.nombre || '(sin huésped)',
+      documento: hp.documento || '',
+      tipo_documento: hp.tipo_documento || '',
+      telefono: hp.telefono || '',
+      email: hp.email || '',
+      habitacion: r.habitacion,
+      fecha_checkin: r.fecha_checkin,
+      fecha_checkout: r.fecha_checkout,
+      estado: r.estado,
+      incluye_desayuno: r['incluye_desayuno'] === '1',
+      incluye_almuerzo: r['incluye_almuerzo'] === '1',
+      incluye_cena: r['incluye_cena'] === '1',
+      consumos: consumos.filter((c) => c.id_reserva === r.id_reserva).length,
+    };
+  });
+
+  if (desde || hasta) {
+    const inicio = desde || '0000-01-01';
+    const fin = hasta || '9999-12-31';
+    lista = lista.filter(
+      (r) => r.fecha_checkin <= fin && r.fecha_checkout >= inicio
+    );
+  }
+
+  lista.sort((a, b) => a.id_reserva.localeCompare(b.id_reserva));
+
+  res.json({
+    total: lista.length,
+    total_huespedes: huespedes.length,
+    desde: desde || null,
+    hasta: hasta || null,
+    reservas: lista,
+  });
+});
+
+// Eliminar una reserva y sus consumos / registros del turnero asociados
+app.delete('/api/reservas/:id', requireAuth, requireAdmin, (req, res) => {
+  const reservas = readCsv('reservas.csv');
+  const idx = reservas.findIndex((r) => r.id_reserva === String(req.params.id));
+  if (idx === -1) {
+    return res.status(404).json({ error: 'La reserva no existe.' });
+  }
+  const reserva = reservas[idx];
+  reservas.splice(idx, 1);
+  writeCsv('reservas.csv', reservas);
+
+  const consumos = readCsv('consumos.csv').filter((c) => c.id_reserva !== reserva.id_reserva);
+  writeCsv('consumos.csv', consumos);
+
+  const turnero = readCsv('turnero.csv').filter((t) => t.id_reserva !== reserva.id_reserva);
+  writeCsv('turnero.csv', turnero);
+
+  // Si el huésped queda sin reservas, eliminar también sus datos del escaneo
+  // facial (foto y artefactos locales del kiosco) para que deje de reconocerse.
+  const quedanReservas = readCsv('reservas.csv').some(
+    (r) => r.id_huesped === reserva.id_huesped
+  );
+  const facialEliminado = quedanReservas ? [] : limpiarDatosFacialesLocal(reserva.id_huesped);
+
+  res.json({
+    ok: true,
+    message: `Reserva ${reserva.id_reserva} eliminada correctamente.`,
+    datos_escaneo_eliminados: facialEliminado,
+  });
+});
+
+// Eliminar un huésped (usuario) con todo lo asociado:
+// reservas, consumos, registros del turnero y foto de reconocimiento facial
+app.delete('/api/huespedes/:id', requireAuth, requireAdmin, (req, res) => {
+  const huespedes = readCsv('huespedes.csv');
+  const idx = huespedes.findIndex((h) => h.id === String(req.params.id));
+  if (idx === -1) {
+    return res.status(404).json({ error: 'El huésped no existe.' });
+  }
+  const hp = huespedes[idx];
+  huespedes.splice(idx, 1);
+  writeCsv('huespedes.csv', huespedes);
+
+  const reservas = readCsv('reservas.csv');
+  const idReservas = reservas
+    .filter((r) => r.id_huesped === hp.id)
+    .map((r) => r.id_reserva);
+  writeCsv('reservas.csv', reservas.filter((r) => r.id_huesped !== hp.id));
+
+  if (idReservas.length > 0) {
+    const consumos = readCsv('consumos.csv').filter((c) => !idReservas.includes(c.id_reserva));
+    writeCsv('consumos.csv', consumos);
+    const turnero = readCsv('turnero.csv').filter((t) => !idReservas.includes(t.id_reserva));
+    writeCsv('turnero.csv', turnero);
+  }
+
+  // Limpiar los datos del escaneo facial (foto del servidor, descargas
+  // locales y modelo del kiosco) para que deje de reconocerse.
+  const facialEliminado = limpiarDatosFacialesLocal(hp.id);
+
+  res.json({
+    ok: true,
+    message: `Huésped ${hp.nombre} eliminado correctamente${idReservas.length ? ` junto con sus ${idReservas.length} reserva(s)` : ''}.`,
+    datos_escaneo_eliminados: facialEliminado,
+  });
+});
+
+// ------------------------------------------------------------------
 // MÓDULO FACIAL — Registro y reconocimiento de rostros (OpenCV)
 // ------------------------------------------------------------------
 
@@ -352,16 +480,75 @@ function guardarRostro(idHuesped, base64Imagen) {
   return ruta;
 }
 
-// Lista los rostros registrados (para que el kiosco OpenCV los descargue y entrene)
-app.get('/api/rostros', requireAuth, (req, res) => {
-  if (!fs.existsSync(ROSTROS_DIR)) {
-    return res.json({ rostros: [] });
-  }
-  const huespedes = readCsv('huespedes.csv');
-  const archivos = fs
+// Archivos de rostro guardados en data/rostros
+function listarArchivosRostros() {
+  if (!fs.existsSync(ROSTROS_DIR)) return [];
+  return fs
     .readdirSync(ROSTROS_DIR)
     .filter((f) => /\.(jpg|jpeg|png)$/i.test(f))
     .sort((a, b) => a.localeCompare(b));
+}
+
+// Firma del conjunto actual de rostros (para que el kiosco detecte altas/bajas)
+function calcularFirmaRostros() {
+  const hash = crypto.createHash('sha256');
+  const archivos = listarArchivosRostros();
+  for (const f of archivos) {
+    hash.update(f);
+    hash.update(fs.readFileSync(path.join(ROSTROS_DIR, f)));
+  }
+  return hash.digest('hex');
+}
+
+// Limpia los datos del escaneo facial de un huésped: foto del servidor y
+// los artefactos locales del kiosco (descargas y modelo entrenado), si el
+// kiosco corre en esta misma máquina. Así el reconocimiento deja de verlo.
+function limpiarDatosFacialesLocal(idHuesped) {
+  const id = String(idHuesped);
+  const borrados = [];
+
+  for (const f of listarArchivosRostros()) {
+    if (f.replace(/\.[^.]+$/, '') === id) {
+      const ruta = path.join(ROSTROS_DIR, f);
+      if (fs.existsSync(ruta)) {
+        fs.unlinkSync(ruta);
+        borrados.push(f);
+      }
+    }
+  }
+
+  const pythonDir = path.join(__dirname, '..', 'python');
+  const localRostrosDir = path.join(pythonDir, 'rostros_local');
+  if (fs.existsSync(localRostrosDir)) {
+    const archivos = fs.readdirSync(localRostrosDir);
+    for (const f of archivos) {
+      if (f.startsWith(id + '__') || f.replace(/\.[^.]+$/, '') === id) {
+        const ruta = path.join(localRostrosDir, f);
+        if (fs.existsSync(ruta)) {
+          fs.unlinkSync(ruta);
+          borrados.push('rostros_local/' + f);
+        }
+      }
+    }
+  }
+
+  // Forzar que el modelo se re-entrene desde cero en el próximo ciclo
+  const modeloDir = path.join(pythonDir, 'modelo');
+  for (const f of ['modelo_lbph.yml', 'labels.json']) {
+    const ruta = path.join(modeloDir, f);
+    if (fs.existsSync(ruta)) {
+      fs.unlinkSync(ruta);
+      borrados.push('modelo/' + f);
+    }
+  }
+
+  return borrados;
+}
+
+// Lista los rostros registrados (para que el kiosco OpenCV los descargue y entrene)
+app.get('/api/rostros', requireAuth, (req, res) => {
+  const huespedes = readCsv('huespedes.csv');
+  const archivos = listarArchivosRostros();
 
   const rostros = archivos.map((f) => {
     const idHuesped = f.replace(/\.[^.]+$/, '');
@@ -374,7 +561,13 @@ app.get('/api/rostros', requireAuth, (req, res) => {
       imagen: buffer.toString('base64'),
     };
   });
-  res.json({ rostros });
+  res.json({ rostros, firma: calcularFirmaRostros() });
+});
+
+// Firma ligera del conjunto de rostros (el kiosco la consulta cada pocos
+// segundos para saber si debe re-sincronizar/re-entrenar su modelo).
+app.get('/api/rostros/firma', requireAuth, (req, res) => {
+  res.json({ firma: calcularFirmaRostros() });
 });
 
 // Reclamo de comida por reconocimiento facial.
@@ -454,6 +647,22 @@ app.post('/api/consumo-facial', requireAuth, (req, res) => {
   });
   writeCsv('consumos.csv', consumos);
 
+  // Crear ticket en el turnero (pantalla de la cafetería)
+  const turnero = readCsv('turnero.csv');
+  const ticket = {
+    id: String(nextId(turnero, 'id')),
+    id_reserva: reserva.id_reserva,
+    id_huesped: hp.id,
+    huesped: hp.nombre,
+    habitacion: reserva.habitacion,
+    servicio,
+    fecha: todayStr(),
+    hora: nowTime(),
+    estado: 'EN_PREPARACION',
+  };
+  turnero.push(ticket);
+  writeCsv('turnero.csv', turnero);
+
   res.json({
     ok: true,
     estado: 'recibido',
@@ -463,7 +672,136 @@ app.post('/api/consumo-facial', requireAuth, (req, res) => {
     habitacion: reserva.habitacion,
     servicio,
     hora: nowTime(),
+    turnero: stripInternal(ticket),
   });
+});
+
+// ------------------------------------------------------------------
+// TURNERO — Pantalla de estados de pedidos de la cafetería
+// ------------------------------------------------------------------
+
+// Estado activo (no recogido) del turnero del día
+app.get('/api/turnero', requireAuth, (req, res) => {
+  const fecha = req.query.fecha || todayStr();
+  const delDia = readCsv('turnero.csv').filter((t) => t.fecha === fecha);
+  const activos = delDia
+    .filter((t) => t.estado !== 'RECOGIDO')
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map(stripInternal);
+  const ultimo = delDia
+    .filter((t) => t.estado === 'RECOGIDO')
+    .sort((a, b) => b.id.localeCompare(a.id))[0];
+  res.json({ fecha, turnero: activos, ultimo_entregado: ultimo ? stripInternal(ultimo) : null });
+});
+
+// Historial del día (pedidos recogidos, se mantienen en la base de datos)
+app.get('/api/turnero/historial', requireAuth, (req, res) => {
+  const fecha = req.query.fecha || todayStr();
+  const recogidos = readCsv('turnero.csv')
+    .filter((t) => t.fecha === fecha && t.estado === 'RECOGIDO')
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map(stripInternal);
+  res.json({ fecha, recogidos });
+});
+
+// Consulta para el kiosco: ¿el huésped ya recibió la comida de la ventana vigente?
+app.get('/api/turnero/estado', requireAuth, (req, res) => {
+  const { id_huesped, hora } = req.query;
+  if (!id_huesped) {
+    return res.status(400).json({ error: 'Debe indicar el id_huesped.' });
+  }
+
+  const huespedes = readCsv('huespedes.csv');
+  const hp = huespedes.find((h) => h.id === String(id_huesped));
+  if (!hp) {
+    return res.json({ ok: false, estado: 'no_encontrado', message: 'El huésped no está registrado.' });
+  }
+
+  const reservas = readCsv('reservas.csv');
+  const activas = reservas
+    .filter((r) => r.id_huesped === hp.id && r.estado === 'Activa')
+    .sort((a, b) => b.fecha_checkin.localeCompare(a.fecha_checkin));
+  if (activas.length === 0) {
+    return res.json({ ok: false, estado: 'sin_reserva_activa', message: `${hp.nombre} no tiene una reserva activa.`, huesped: hp.nombre });
+  }
+  const reserva = activas[0];
+
+  const hhmm = /^\d{2}:\d{2}$/.test(String(hora || '')) ? String(hora) : nowTime();
+  const ventana = VENTANAS_COMIDA.find((v) => hhmm >= v.inicio && hhmm <= v.fin);
+  if (!ventana) {
+    return res.json({
+      ok: false,
+      estado: 'fuera_de_horario',
+      message: `No hay servicio disponible a las ${hhmm}.`,
+      huesped: hp.nombre,
+      servicio: null,
+      hora: hhmm,
+    });
+  }
+
+  const servicio = ventana.servicio;
+  const incluida = reserva['incluye_' + servicio.toLowerCase()] === '1';
+  const reclamada = readCsv('consumos.csv').some(
+    (c) => c.id_reserva === reserva.id_reserva && c.servicio === servicio && c.fecha === todayStr()
+  );
+
+  if (!incluida) {
+    return res.json({
+      ok: false,
+      estado: 'no_incluida',
+      message: `${hp.nombre} no tiene ${servicio.toLowerCase()} incluido en su plan.`,
+      huesped: hp.nombre,
+      reserva: reserva.id_reserva,
+      servicio,
+    });
+  }
+  if (reclamada) {
+    return res.json({
+      ok: false,
+      estado: 'ya_reclamado',
+      message: `${hp.nombre} ya recibió el ${servicio.toLowerCase()} hoy.`,
+      huesped: hp.nombre,
+      reserva: reserva.id_reserva,
+      servicio,
+    });
+  }
+
+  res.json({
+    ok: true,
+    estado: 'disponible',
+    message: `${servicio} disponible para ${hp.nombre}.`,
+    huesped: hp.nombre,
+    reserva: reserva.id_reserva,
+    habitacion: reserva.habitacion,
+    servicio,
+    hora: hhmm,
+  });
+});
+
+// Marcar un pedido como listo para recoger
+app.post('/api/turnero/:id/lista', requireAuth, (req, res) => {
+  const turnero = readCsv('turnero.csv');
+  const t = turnero.find((x) => x.id === req.params.id);
+  if (!t) return res.status(404).json({ error: 'Pedido del turnero no encontrado.' });
+  if (t.estado !== 'EN_PREPARACION') {
+    return res.status(400).json({ error: 'Solo se puede marcar como listo un pedido en preparación.' });
+  }
+  t.estado = 'LISTO_PARA_RECOGER';
+  writeCsv('turnero.csv', turnero);
+  res.json({ message: `${t.huesped}: ${t.servicio} listo para recoger.`, turnero: stripInternal(t) });
+});
+
+// Marcar un pedido como recogido (se borra de la pantalla, queda en la base de datos)
+app.post('/api/turnero/:id/recogido', requireAuth, (req, res) => {
+  const turnero = readCsv('turnero.csv');
+  const t = turnero.find((x) => x.id === req.params.id);
+  if (!t) return res.status(404).json({ error: 'Pedido del turnero no encontrado.' });
+  if (t.estado !== 'LISTO_PARA_RECOGER') {
+    return res.status(400).json({ error: 'Solo se puede recoger un pedido que esté listo para recoger.' });
+  }
+  t.estado = 'RECOGIDO';
+  writeCsv('turnero.csv', turnero);
+  res.json({ message: `${t.huesped}: ${t.servicio} recogido.`, turnero: stripInternal(t) });
 });
 
 // ------------------------------------------------------------------
