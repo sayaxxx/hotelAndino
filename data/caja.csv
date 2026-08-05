@@ -1,3 +1,5 @@
 id,origen,tipo,id_reserva,concepto,valor,fecha,hora,registrado_por
 1,huesped,ingreso,1002,Bandeja extra,1400,2026-08-05,19:08,Administrador
 2,comanda,ingreso,,Comanda #2 - Mesa 1,28000,2026-08-05,23:44,Administrador
+3,huesped,ingreso,1002,Comanda #5 - María Fernanda López,8000,2026-08-05,00:40,Administrador
+4,huesped,ingreso,1002,Bandejita,10000,2026-08-05,00:40,Administrador

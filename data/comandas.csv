@@ -1,5 +1,6 @@
 id_comanda,id_mesero,tipo_servicio,id_mesa,id_reserva,fecha,hora,estado,total
 1,2,huesped,,1002,2026-08-04,18:49,Entregada,28000
 2,2,mesa,1,,2026-08-05,23:44,Entregada,28000
-3,2,mesa,1,,2026-08-05,23:49,Registrada,3000
-4,2,mesa,1,,2026-08-05,23:50,Registrada,3000
+3,2,mesa,1,,2026-08-05,23:49,Cancelada,3000
+4,2,mesa,1,,2026-08-05,23:50,Cancelada,3000
+5,2,huesped,,1002,2026-08-05,00:39,Entregada,8000

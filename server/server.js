@@ -1165,6 +1165,7 @@ app.post('/api/comandas/:id/entregar', requireAuth, (req, res) => {
 
   // La comanda es un ingreso aparte (no está incluida en las reservas):
   // al completarse, se suma automáticamente al balance como ingreso de caja.
+  // Si es de un huésped, se clasifica como consumo de huésped (no como venta de comanda).
   let cliente = '';
   if (c.tipo_servicio === 'mesa') {
     const mesa = readCsv('mesas.csv').find((m) => m.id === c.id_mesa);
@@ -1175,10 +1176,12 @@ app.post('/api/comandas/:id/entregar', requireAuth, (req, res) => {
     cliente = hp ? hp.nombre : 'Res. ' + c.id_reserva;
   }
 
+  const origen = c.tipo_servicio === 'huesped' ? 'huesped' : 'comanda';
+
   const caja = readCsv('caja.csv');
   caja.push({
     id: String(nextId(caja, 'id')),
-    origen: 'comanda',
+    origen,
     tipo: 'ingreso',
     id_reserva: c.tipo_servicio === 'huesped' ? String(c.id_reserva) : '',
     concepto: `Comanda #${c.id_comanda} - ${cliente}`,
@@ -1189,8 +1192,9 @@ app.post('/api/comandas/:id/entregar', requireAuth, (req, res) => {
   });
   writeCsv('caja.csv', caja);
 
+  const clasificacion = origen === 'huesped' ? 'como consumo de huésped' : 'como venta de comanda';
   res.json({
-    message: `Comanda ${c.id_comanda} marcada como entregada. El total se sumó al balance como ingreso.`,
+    message: `Comanda ${c.id_comanda} marcada como entregada. El total se sumó al balance ${clasificacion}.`,
   });
 });
 

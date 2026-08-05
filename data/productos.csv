@@ -1,8 +1,8 @@
 id,nombre,unidad,stock,stock_minimo
-1,Jugo de naranja,unidad,38,10
+1,Jugo de naranja,unidad,40,10
 3,Leche,litro,30,8
 4,Pan de yuca,unidad,46,15
-5,Huevo,unidad,116,30
+5,Huevo,unidad,114,30
 6,Avena,kg,10,3
 7,Pollo,kg,14.5,4
 8,Papa,kg,19.7,5
