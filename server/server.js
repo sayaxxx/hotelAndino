@@ -1162,7 +1162,36 @@ app.post('/api/comandas/:id/entregar', requireAuth, (req, res) => {
   }
   c.estado = 'Entregada';
   writeCsv('comandas.csv', comandas);
-  res.json({ message: `Comanda ${c.id_comanda} marcada como entregada.` });
+
+  // La comanda es un ingreso aparte (no está incluida en las reservas):
+  // al completarse, se suma automáticamente al balance como ingreso de caja.
+  let cliente = '';
+  if (c.tipo_servicio === 'mesa') {
+    const mesa = readCsv('mesas.csv').find((m) => m.id === c.id_mesa);
+    cliente = mesa ? mesa.nombre : 'Mesa ' + c.id_mesa;
+  } else {
+    const rsv = readCsv('reservas.csv').find((r) => r.id_reserva === c.id_reserva);
+    const hp = rsv ? readCsv('huespedes.csv').find((h) => h.id === rsv.id_huesped) : null;
+    cliente = hp ? hp.nombre : 'Res. ' + c.id_reserva;
+  }
+
+  const caja = readCsv('caja.csv');
+  caja.push({
+    id: String(nextId(caja, 'id')),
+    origen: 'comanda',
+    tipo: 'ingreso',
+    id_reserva: c.tipo_servicio === 'huesped' ? String(c.id_reserva) : '',
+    concepto: `Comanda #${c.id_comanda} - ${cliente}`,
+    valor: String(c.total),
+    fecha: c.fecha,
+    hora: nowTime(),
+    registrado_por: req.usuario.nombre,
+  });
+  writeCsv('caja.csv', caja);
+
+  res.json({
+    message: `Comanda ${c.id_comanda} marcada como entregada. El total se sumó al balance como ingreso.`,
+  });
 });
 
 // Cancelar comanda y restaurar stock
@@ -1220,6 +1249,7 @@ app.get('/api/caja', requireAuth, requireAdmin, (req, res) => {
     totales: {
       externos: redondear(sumar((m) => m.origen === 'externo' && m.tipo === 'ingreso')),
       huespedes: redondear(sumar((m) => m.origen === 'huesped' && m.tipo === 'ingreso')),
+      comandas: redondear(sumar((m) => m.origen === 'comanda' && m.tipo === 'ingreso')),
       ingresos: redondear(ingresos),
       egresos: redondear(egresos),
       neto: redondear(ingresos - egresos),

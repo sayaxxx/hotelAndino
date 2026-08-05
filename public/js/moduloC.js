@@ -10,7 +10,7 @@ const ModuloC = (() => {
     reporte: null,
   };
 
-  const ORIGEN_LABEL = { externo: 'Cliente externo', huesped: 'Huésped', gasto: 'Gasto' };
+  const ORIGEN_LABEL = { externo: 'Cliente externo', huesped: 'Huésped', gasto: 'Gasto', comanda: 'Comanda' };
 
   function init() {
     // Pestañas
@@ -71,6 +71,7 @@ const ModuloC = (() => {
     document.getElementById('caja-resumen').innerHTML = `
       ${statCard('Cobros externos', fmtPesos(t.externos), 'positivo')}
       ${statCard('Consumos de huéspedes', fmtPesos(t.huespedes), 'positivo')}
+      ${statCard('Ventas de comandas', fmtPesos(t.comandas || 0), 'positivo')}
       ${statCard('Total ingresos', fmtPesos(t.ingresos), 'positivo')}
       ${statCard('Egresos', fmtPesos(t.egresos), 'negativo')}
       ${statCard('Neto del día', fmtPesos(t.neto), t.neto < 0 ? 'negativo' : 'neutro')}
