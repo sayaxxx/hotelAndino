@@ -1,0 +1,9 @@
+{
+  "servidor": "http://localhost:3000",
+  "usuario": "cafeteria1",
+  "password": "cafeteria123",
+  "camera": 0,
+  "umbral_confianza": 85,
+  "cooldown_seg": 60,
+  "refresh_seg": 300
+}

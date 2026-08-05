@@ -2,3 +2,4 @@ id,usuario,password,nombre,rol
 1,admin,admin123,Administrador,admin
 2,mesero1,mesero123,Carlos Mesero,mesero
 3,mesero2,mesero123,Luisa Mesera,mesero
+4,cafeteria1,cafeteria123,Kiosco Cafetería,mesero

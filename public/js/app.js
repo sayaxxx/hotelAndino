@@ -35,6 +35,12 @@ const App = (() => {
     });
     document.getElementById('form-reserva').addEventListener('submit', crearReserva);
 
+    // Registro facial en el modal de nueva reserva
+    document.getElementById('btn-cam').addEventListener('click', activarCamara);
+    document.getElementById('btn-capturar').addEventListener('click', capturarRostro);
+    document.getElementById('btn-descartar').addEventListener('click', descartarRostro);
+    document.getElementById('res-foto').addEventListener('change', cargarFoto);
+
     // Si la sesión expira, volver al login
     document.addEventListener('andino:noauth', () => mostrarLogin());
 
@@ -180,7 +186,115 @@ const App = (() => {
     if (abrir) {
       document.getElementById('res-fecha-in').value = hoyISO();
       document.getElementById('res-fecha-out').value = hoyISO();
+    } else {
+      descartarRostro();
     }
+  }
+
+  /* ---------- Captura de rostro (webcam / foto) ---------- */
+
+  let stream = null;
+  let rostroBase64 = null;
+
+  function detenerCamara() {
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+      stream = null;
+    }
+    document.getElementById('res-video').srcObject = null;
+  }
+
+  function setEstadoRostro(texto) {
+    document.getElementById('res-rostro-msg').textContent = texto;
+  }
+
+  async function activarCamara() {
+    const video = document.getElementById('res-video');
+    const ph = document.getElementById('res-ph');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      App.mostrarToast('La cámara no está disponible en este navegador (requiere HTTPS o localhost).', 'error');
+      setEstadoRostro('Cámara no disponible. Use "Subir foto".');
+      return;
+    }
+    try {
+      detenerCamara();
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false,
+      });
+      video.srcObject = stream;
+      video.classList.remove('hidden');
+      document.getElementById('res-preview').classList.add('hidden');
+      ph.classList.add('hidden');
+      document.getElementById('btn-cam').textContent = 'Reiniciar cámara';
+      document.getElementById('btn-capturar').disabled = false;
+      setEstadoRostro('Mire a la cámara y presione "Capturar rostro".');
+    } catch (err) {
+      App.mostrarToast('No se pudo acceder a la cámara: ' + err.message, 'error');
+      setEstadoRostro('No se pudo acceder a la cámara. Use "Subir foto".');
+    }
+  }
+
+  function capturarRostro() {
+    const video = document.getElementById('res-video');
+    if (!stream || !video.videoWidth) {
+      App.mostrarToast('Active primero la cámara.', 'error');
+      return;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    rostroBase64 = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+
+    document.getElementById('res-preview').src = 'data:image/jpeg;base64,' + rostroBase64;
+    document.getElementById('res-preview').classList.remove('hidden');
+    video.classList.add('hidden');
+    document.getElementById('res-ph').classList.add('hidden');
+    detenerCamara();
+    document.getElementById('btn-cam').textContent = 'Activar cámara';
+    document.getElementById('btn-capturar').disabled = true;
+    document.getElementById('btn-descartar').classList.remove('hidden');
+    setEstadoRostro('Rostro capturado. Se guardará con la reserva.');
+  }
+
+  function cargarFoto(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      App.mostrarToast('El archivo debe ser una imagen.', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      rostroBase64 = String(reader.result).split(',')[1];
+      document.getElementById('res-preview').src = reader.result;
+      document.getElementById('res-preview').classList.remove('hidden');
+      document.getElementById('res-video').classList.add('hidden');
+      document.getElementById('res-ph').classList.add('hidden');
+      document.getElementById('btn-capturar').disabled = true;
+      document.getElementById('btn-descartar').classList.remove('hidden');
+      detenerCamara();
+      document.getElementById('btn-cam').textContent = 'Activar cámara';
+      setEstadoRostro('Foto cargada. Se guardará con la reserva.');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
+
+  function descartarRostro() {
+    rostroBase64 = null;
+    detenerCamara();
+    const video = document.getElementById('res-video');
+    video.classList.add('hidden');
+    video.srcObject = null;
+    document.getElementById('res-preview').classList.add('hidden');
+    document.getElementById('res-preview').removeAttribute('src');
+    document.getElementById('res-ph').classList.remove('hidden');
+    document.getElementById('btn-cam').textContent = 'Activar cámara';
+    document.getElementById('btn-capturar').disabled = true;
+    document.getElementById('btn-descartar').classList.add('hidden');
+    setEstadoRostro('No se ha capturado ningún rostro.');
   }
 
   /* ---------- Nueva reserva (admin) ---------- */
@@ -207,6 +321,8 @@ const App = (() => {
       fecha_checkout: document.getElementById('res-fecha-out').value,
       comidas,
     };
+
+    if (rostroBase64) datos.rostro_base64 = rostroBase64;
 
     try {
       const resp = await Api.crearReserva(datos);

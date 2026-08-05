@@ -72,6 +72,14 @@ const Api = (() => {
       });
     },
 
+    /* --- Módulo facial --- */
+    reclamoFacial(idHuesped, hora) {
+      return request('/api/consumo-facial', {
+        method: 'POST',
+        body: JSON.stringify({ id_huesped: idHuesped, hora: hora || undefined }),
+      });
+    },
+
     /* --- Administración --- */
     crearReserva(datos) {
       return request('/api/reservas', {

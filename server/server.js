@@ -8,6 +8,7 @@ const PORT = process.env.PORT || 3000;
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
+const ROSTROS_DIR = path.join(DATA_DIR, 'rostros');
 
 app.use(express.json());
 app.use(express.static(PUBLIC_DIR));
@@ -73,6 +74,15 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 const nowTime = () => new Date().toTimeString().slice(0, 5);
 
 const MEALS = ['Desayuno', 'Almuerzo', 'Cena'];
+
+// Ventanas de servicio para el reconocimiento facial en cafetería
+// (el kiosco marca la comida según la hora del sistema)
+const VENTANAS_COMIDA = [
+  { servicio: 'Desayuno', inicio: '05:00', fin: '08:30', etiqueta: 'Desayuno (05:00 - 08:30)' },
+  { servicio: 'Almuerzo', inicio: '12:00', fin: '15:00', etiqueta: 'Almuerzo (12:00 - 15:00)' },
+  // Cena temporalmente hasta las 23:59 para pruebas; luego se ajusta su horario definitivo.
+  { servicio: 'Cena', inicio: '17:30', fin: '23:59', etiqueta: 'Cena (17:30 - 23:59)' },
+];
 
 function stripInternal(obj) {
   if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
@@ -265,7 +275,7 @@ app.post('/api/consumos', requireAuth, (req, res) => {
 app.post('/api/reservas', requireAuth, requireAdmin, (req, res) => {
   const {
     nombre, documento, tipo_documento, telefono, email,
-    habitacion, fecha_checkin, fecha_checkout, comidas,
+    habitacion, fecha_checkin, fecha_checkout, comidas, rostro_base64,
   } = req.body || {};
 
   if (!nombre || !documento || !habitacion || !fecha_checkin || !fecha_checkout) {
@@ -312,10 +322,147 @@ app.post('/api/reservas', requireAuth, requireAdmin, (req, res) => {
   reservas.push(nueva);
   writeCsv('reservas.csv', reservas);
 
+  // Si se envió un rostro (base64), guardarlo para el reconocimiento en cafetería
+  if (rostro_base64 && typeof rostro_base64 === 'string') {
+    guardarRostro(huesped.id, rostro_base64);
+  }
+
   res.status(201).json({
     message: `Reserva ${id_reserva} creada para ${huesped.nombre}.`,
     reserva: stripInternal(nueva),
     esNuevoHuesped: esNuevoHuesped,
+  });
+});
+
+// ------------------------------------------------------------------
+// MÓDULO FACIAL — Registro y reconocimiento de rostros (OpenCV)
+// ------------------------------------------------------------------
+
+// Guarda la imagen (base64) del huésped en data/rostros/{id}.jpg
+function guardarRostro(idHuesped, base64Imagen) {
+  const dataUrl = String(base64Imagen);
+  const b64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+  const buffer = Buffer.from(b64, 'base64');
+  if (buffer.length < 100) {
+    throw new Error('La imagen del rostro no es válida (archivo demasiado pequeño).');
+  }
+  fs.mkdirSync(ROSTROS_DIR, { recursive: true });
+  const ruta = path.join(ROSTROS_DIR, String(idHuesped) + '.jpg');
+  fs.writeFileSync(ruta, buffer);
+  return ruta;
+}
+
+// Lista los rostros registrados (para que el kiosco OpenCV los descargue y entrene)
+app.get('/api/rostros', requireAuth, (req, res) => {
+  if (!fs.existsSync(ROSTROS_DIR)) {
+    return res.json({ rostros: [] });
+  }
+  const huespedes = readCsv('huespedes.csv');
+  const archivos = fs
+    .readdirSync(ROSTROS_DIR)
+    .filter((f) => /\.(jpg|jpeg|png)$/i.test(f))
+    .sort((a, b) => a.localeCompare(b));
+
+  const rostros = archivos.map((f) => {
+    const idHuesped = f.replace(/\.[^.]+$/, '');
+    const hp = huespedes.find((h) => h.id === idHuesped);
+    const buffer = fs.readFileSync(path.join(ROSTROS_DIR, f));
+    return {
+      id_huesped: idHuesped,
+      nombre: hp ? hp.nombre : '',
+      archivo: f,
+      imagen: buffer.toString('base64'),
+    };
+  });
+  res.json({ rostros });
+});
+
+// Reclamo de comida por reconocimiento facial.
+// El kiosco envía el id_huesped identificado; el servidor decide la ventana
+// según la hora (body.hora, si viene, o la hora del servidor), valida el plan,
+// evita duplicados y registra el consumo.
+app.post('/api/consumo-facial', requireAuth, (req, res) => {
+  const { id_huesped, hora } = req.body || {};
+
+  if (!id_huesped) {
+    return res.status(400).json({ error: 'Debe indicar el id_huesped identificado.' });
+  }
+
+  const huespedes = readCsv('huespedes.csv');
+  const hp = huespedes.find((h) => h.id === String(id_huesped));
+  if (!hp) {
+    return res.status(404).json({ ok: false, estado: 'no_encontrado', message: 'El huésped no está registrado en el sistema.' });
+  }
+
+  const reservas = readCsv('reservas.csv');
+  const activas = reservas
+    .filter((r) => r.id_huesped === hp.id && r.estado === 'Activa')
+    .sort((a, b) => b.fecha_checkin.localeCompare(a.fecha_checkin));
+  if (activas.length === 0) {
+    return res.json({ ok: false, estado: 'sin_reserva_activa', message: `${hp.nombre} no tiene una reserva activa.`, huesped: hp.nombre });
+  }
+  const reserva = activas[0];
+
+  // Ventana de servicio según la hora del sistema (o la reportada por el kiosco)
+  const hhmm = /^\d{2}:\d{2}$/.test(String(hora || '')) ? String(hora) : nowTime();
+  const ventana = VENTANAS_COMIDA.find((v) => hhmm >= v.inicio && hhmm <= v.fin);
+  if (!ventana) {
+    return res.json({
+      ok: false,
+      estado: 'fuera_de_horario',
+      message: `No hay servicio disponible a las ${hhmm}. Horarios: ${VENTANAS_COMIDA.map((v) => v.etiqueta).join(' · ')}`,
+      huesped: hp.nombre,
+      hora: hhmm,
+      ventanas: VENTANAS_COMIDA.map((v) => ({ servicio: v.servicio, inicio: v.inicio, fin: v.fin })),
+    });
+  }
+
+  const servicio = ventana.servicio;
+  const incluida = reserva['incluye_' + servicio.toLowerCase()] === '1';
+  if (!incluida) {
+    return res.json({
+      ok: false,
+      estado: 'no_incluida',
+      message: `${hp.nombre} no tiene ${servicio.toLowerCase()} incluido en su plan (Res. ${reserva.id_reserva}).`,
+      huesped: hp.nombre,
+      reserva: reserva.id_reserva,
+      servicio,
+    });
+  }
+
+  const consumos = readCsv('consumos.csv');
+  const yaReclamada = consumos.some(
+    (c) => c.id_reserva === reserva.id_reserva && c.servicio === servicio && c.fecha === todayStr()
+  );
+  if (yaReclamada) {
+    return res.json({
+      ok: false,
+      estado: 'ya_reclamado',
+      message: `${hp.nombre} ya reclamó el ${servicio.toLowerCase()} hoy.`,
+      huesped: hp.nombre,
+      reserva: reserva.id_reserva,
+      servicio,
+    });
+  }
+
+  consumos.push({
+    id: String(nextId(consumos, 'id')),
+    id_reserva: reserva.id_reserva,
+    servicio,
+    fecha: todayStr(),
+    hora: nowTime(),
+  });
+  writeCsv('consumos.csv', consumos);
+
+  res.json({
+    ok: true,
+    estado: 'recibido',
+    message: `${servicio} recibido correctamente para ${hp.nombre}.`,
+    huesped: hp.nombre,
+    reserva: reserva.id_reserva,
+    habitacion: reserva.habitacion,
+    servicio,
+    hora: nowTime(),
   });
 });
 

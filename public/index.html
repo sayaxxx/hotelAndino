@@ -348,6 +348,26 @@
           </div>
         </fieldset>
 
+        <fieldset>
+          <legend>Registro facial (opcional)</legend>
+          <p class="tab-hint">Se usa para que el kiosco de la cafetería reconozca al huésped por cámara y marque sus comidas automáticamente según la hora.</p>
+          <div class="rostro-panel">
+            <div class="rostro-cam">
+              <video id="res-video" autoplay playsinline muted class="hidden"></video>
+              <img id="res-preview" alt="Rostro capturado" class="hidden" />
+              <div id="res-ph" class="rostro-placeholder">Vista previa de la cámara</div>
+            </div>
+            <div class="rostro-controls">
+              <button type="button" class="btn btn-secondary" id="btn-cam">Activar cámara</button>
+              <button type="button" class="btn btn-primary" id="btn-capturar" disabled>Capturar rostro</button>
+              <label class="btn btn-secondary file-btn" for="res-foto">Subir foto</label>
+              <input type="file" id="res-foto" accept="image/*" class="hidden-input" />
+              <button type="button" class="btn btn-danger hidden" id="btn-descartar">Quitar foto</button>
+            </div>
+            <p class="field-hint" id="res-rostro-msg">No se ha capturado ningún rostro.</p>
+          </div>
+        </fieldset>
+
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" data-cerrar-modal>Cancelar</button>
           <button type="submit" class="btn btn-primary" id="btn-crear-reserva">Crear reserva</button>
