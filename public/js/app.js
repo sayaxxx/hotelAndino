@@ -53,6 +53,17 @@ const App = (() => {
     document.getElementById('res-fecha-in').addEventListener('change', ajustarFechasReserva);
     document.getElementById('res-fecha-out').addEventListener('change', ajustarFechasReserva);
 
+    // Campos numéricos: solo dígitos y un separador decimal (sin letras ni símbolos)
+    document.addEventListener('input', (e) => {
+      if (e.target.matches && e.target.matches('input[type="number"]')) {
+        const limpio = String(e.target.value)
+          .replace(/[^0-9.,]/g, '')
+          .replace(/,/g, '.')
+          .replace(/\.(?=.*\.)/g, '');
+        if (limpio !== e.target.value) e.target.value = limpio;
+      }
+    });
+
     // Si la sesión expira, volver al login
     document.addEventListener('andino:noauth', () => mostrarLogin());
 

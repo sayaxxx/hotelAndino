@@ -512,6 +512,17 @@ h1, h2, h3, h4 { margin: 0 0 8px; color: var(--text-strong); letter-spacing: -0.
   box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15);
 }
 
+/* Ocultar las flechas (spinner) de incremento/decremento en campos numéricos */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 .field-hint { color: var(--text-soft); font-size: 12.5px; margin: 6px 0 0; }
 
 fieldset {
