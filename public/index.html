@@ -186,7 +186,12 @@
         <div id="tab-comanda" class="tab-pane">
           <div class="comanda-layout">
             <div class="card">
-              <h2 class="card-title">Selecciona los platos</h2>
+              <div class="inv-head">
+                <h2 class="card-title">Selecciona los platos</h2>
+                <button type="button" class="btn btn-primary solo-admin hidden" id="btn-nuevo-plato">
+                  <span class="btn-icon">&#43;</span> Agregar plato
+                </button>
+              </div>
               <div class="filtro-categorias" id="filtro-categorias"></div>
               <div id="lista-platos" class="plato-grid"></div>
             </div>
@@ -456,6 +461,45 @@
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" data-cerrar-modal-producto>Cancelar</button>
           <button type="submit" class="btn btn-primary">Guardar producto</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-plato" class="modal hidden">
+    <div class="modal-backdrop" data-cerrar-modal-plato></div>
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>Nuevo plato</h2>
+        <button type="button" class="modal-close" data-cerrar-modal-plato aria-label="Cerrar">&times;</button>
+      </div>
+      <form id="form-plato" autocomplete="off">
+        <div class="form-grid">
+          <div class="field">
+            <label for="plato-nombre">Nombre *</label>
+            <input id="plato-nombre" type="text" placeholder="Ej: Sándwich de pollo" required />
+          </div>
+          <div class="field">
+            <label for="plato-categoria">Categoría *</label>
+            <input id="plato-categoria" type="text" list="dlist-categorias" placeholder="Ej: Almuerzo" required />
+            <datalist id="dlist-categorias"></datalist>
+          </div>
+          <div class="field">
+            <label for="plato-precio">Precio *</label>
+            <input id="plato-precio" type="number" min="0" step="100" placeholder="0" required />
+          </div>
+        </div>
+
+        <h3 class="resumen-sub">Receta (ingredientes del plato)</h3>
+        <div id="plato-ingredientes" class="ing-lista"></div>
+        <button type="button" class="btn btn-secondary btn-block" id="btn-agregar-ingrediente">
+          <span class="btn-icon">&#43;</span> Agregar ingrediente
+        </button>
+        <p class="tab-hint">Cada ingrediente descuenta automáticamente del stock al registrar comandas. Las cantidades usan la unidad del producto.</p>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" data-cerrar-modal-plato>Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar plato</button>
         </div>
       </form>
     </div>

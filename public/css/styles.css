@@ -706,7 +706,24 @@ legend {
 .plato-card.selected { border-color: var(--teal-600); box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15); }
 
 .plato-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 8px; }
+.plato-top-right { display: flex; align-items: center; gap: 6px; }
 .plato-cat { color: var(--text-soft); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+
+.plato-del {
+  width: 22px; height: 22px;
+  border: none;
+  border-radius: 6px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.plato-del:hover { background: var(--danger); color: #fff; }
 
 .plato-nombre { font-weight: 700; color: var(--text-strong); margin-bottom: 4px; }
 .plato-precio { color: var(--teal-700); font-weight: 700; font-size: 14.5px; margin-bottom: 10px; }
@@ -887,6 +904,32 @@ td.acciones .btn { margin-right: 6px; }
   gap: 10px;
   margin-top: 18px;
 }
+
+/* --- Receta del plato (ingredientes) --- */
+
+.ing-lista { display: grid; gap: 10px; margin-bottom: 12px; }
+
+.ing-row {
+  display: grid;
+  grid-template-columns: 1fr 110px 36px;
+  gap: 8px;
+  align-items: center;
+}
+
+.ing-red {
+  width: 34px; height: 34px;
+  border: 1px solid var(--danger-bg);
+  border-radius: 8px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ing-red:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
 
 /* --- Registro facial --- */
 

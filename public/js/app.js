@@ -414,7 +414,11 @@ const App = (() => {
     toast._timer = setTimeout(() => toast.classList.add('hidden'), 3200);
   }
 
-  return { init, mostrarVista, mostrarToast };
+  function esAdmin() {
+    return !!(sesion && sesion.rol === 'admin');
+  }
+
+  return { init, mostrarVista, mostrarToast, esAdmin };
 })();
 
 document.addEventListener('DOMContentLoaded', App.init);

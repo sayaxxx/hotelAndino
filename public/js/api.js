@@ -130,6 +130,15 @@ const Api = (() => {
     listarPlatos() {
       return request('/api/platos');
     },
+    crearPlato(datos) {
+      return request('/api/platos', {
+        method: 'POST',
+        body: JSON.stringify(datos),
+      });
+    },
+    eliminarPlato(id) {
+      return request(`/api/platos/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    },
     listarInventario() {
       return request('/api/inventario');
     },

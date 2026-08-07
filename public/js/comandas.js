@@ -11,6 +11,7 @@ const Comandas = (() => {
     meseros: [],
     mesas: [],
     comandas: [],
+    productos: [], // para la receta del nuevo plato
     seleccion: {}, // id_plato -> cantidad
     catActiva: 'Todas',
   };
@@ -40,8 +41,9 @@ const Comandas = (() => {
     // Steppers y cantidad en la lista de platos (delegación)
     document.getElementById('lista-platos').addEventListener('click', (e) => {
       const btn = e.target.closest('.stepper-btn');
-      if (!btn) return;
-      cambiarCantidad(btn.dataset.plato, parseInt(btn.dataset.delta, 10));
+      if (btn) cambiarCantidad(btn.dataset.plato, parseInt(btn.dataset.delta, 10));
+      const del = e.target.closest('.plato-del');
+      if (del) eliminarPlato(del.dataset.id, del.dataset.nombre);
     });
     document.getElementById('lista-platos').addEventListener('input', (e) => {
       if (!e.target.classList.contains('stepper-input')) return;
@@ -68,6 +70,20 @@ const Comandas = (() => {
 
     document.getElementById('com-reserva').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') e.preventDefault();
+    });
+
+    // Gestión de platos (solo admin): modal de nuevo plato y receta
+    document.getElementById('btn-nuevo-plato').addEventListener('click', abrirModalPlato);
+    document.querySelectorAll('[data-cerrar-modal-plato]').forEach((el) => {
+      el.addEventListener('click', () => abrirModalPlato(false));
+    });
+    document.getElementById('form-plato').addEventListener('submit', crearPlato);
+    document.getElementById('btn-agregar-ingrediente').addEventListener('click', () => agregarFilaIngrediente());
+    document.getElementById('plato-ingredientes').addEventListener('click', (e) => {
+      const btn = e.target.closest('.ing-red');
+      if (!btn) return;
+      const fila = btn.closest('.ing-row');
+      if (fila) fila.remove();
     });
   }
 
@@ -152,7 +168,11 @@ const Comandas = (() => {
       return `
         <div class="plato-card ${cant > 0 ? 'selected' : ''}">
           <div class="plato-top">
-            <span class="plato-cat">${esc(p.categoria)}</span>${badge}
+            <span class="plato-cat">${esc(p.categoria)}</span>
+            <div class="plato-top-right">
+              ${badge}
+              ${App.esAdmin() ? `<button type="button" class="plato-del" data-id="${esc(p.id)}" data-nombre="${esc(p.nombre)}" title="Eliminar plato" aria-label="Eliminar ${esc(p.nombre)}">&times;</button>` : ''}
+            </div>
           </div>
           <div class="plato-nombre">${esc(p.nombre)}</div>
           <div class="plato-precio">${fmtPesos(p.precio)}</div>
@@ -217,6 +237,116 @@ const Comandas = (() => {
     const tipo = document.querySelector('input[name="com-tipo"]:checked').value;
     document.getElementById('campo-mesa').classList.toggle('hidden', tipo !== 'mesa');
     document.getElementById('campo-reserva').classList.toggle('hidden', tipo !== 'huesped');
+  }
+
+  /* ---------- Gestión de platos (solo admin) ---------- */
+
+  async function abrirModalPlato(abrir = true) {
+    const modal = document.getElementById('modal-plato');
+    if (!abrir) {
+      modal.classList.add('hidden');
+      return;
+    }
+    try {
+      const datos = await Api.listarInventario();
+      state.productos = datos.inventario;
+    } catch (err) {
+      App.mostrarToast(err.message, 'error');
+      return;
+    }
+    // Categorías existentes como sugerencia
+    const cats = [...new Set(state.platos.map((p) => p.categoria))];
+    document.getElementById('dlist-categorias').innerHTML = cats
+      .map((c) => `<option value="${esc(c)}">`).join('');
+    document.getElementById('form-plato').reset();
+    document.getElementById('plato-ingredientes').innerHTML = '';
+    agregarFilaIngrediente();
+    modal.classList.remove('hidden');
+  }
+
+  function plantillaIngrediente() {
+    const opciones = '<option value="">Producto...</option>' +
+      state.productos.map((p) =>
+        `<option value="${esc(p.id)}">${esc(p.nombre)} (${esc(p.unidad || 'u')})</option>`
+      ).join('');
+    return `
+      <div class="ing-row">
+        <select class="ing-select" required>${opciones}</select>
+        <input type="number" class="ing-cant" min="0" step="0.01" placeholder="Cant." required />
+        <button type="button" class="ing-red" title="Quitar ingrediente" aria-label="Quitar ingrediente">&times;</button>
+      </div>`;
+  }
+
+  function agregarFilaIngrediente() {
+    const cont = document.getElementById('plato-ingredientes');
+    if (!state.productos.length) {
+      App.mostrarToast('Primero agregue productos al inventario.', 'error');
+      return;
+    }
+    cont.insertAdjacentHTML('beforeend', plantillaIngrediente());
+  }
+
+  async function crearPlato(e) {
+    e.preventDefault();
+    const nombre = document.getElementById('plato-nombre').value.trim();
+    const categoria = document.getElementById('plato-categoria').value.trim();
+    const precio = parseFloat(document.getElementById('plato-precio').value);
+
+    if (!nombre) {
+      App.mostrarToast('Indique el nombre del plato.', 'error');
+      return;
+    }
+    if (!categoria) {
+      App.mostrarToast('Indique la categoría del plato.', 'error');
+      return;
+    }
+    if (isNaN(precio) || precio < 0) {
+      App.mostrarToast('Ingrese un precio válido.', 'error');
+      return;
+    }
+
+    const ingredientes = [];
+    document.querySelectorAll('#plato-ingredientes .ing-row').forEach((fila) => {
+      const idProducto = fila.querySelector('.ing-select').value;
+      const cantidad = parseFloat(fila.querySelector('.ing-cant').value);
+      if (idProducto && !isNaN(cantidad) && cantidad > 0) {
+        ingredientes.push({ id_producto: idProducto, cantidad });
+      }
+    });
+    if (!ingredientes.length) {
+      App.mostrarToast('Agregue al menos un ingrediente con cantidad.', 'error');
+      return;
+    }
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+
+    try {
+      const resp = await Api.crearPlato({ nombre, categoria, precio, ingredientes });
+      App.mostrarToast(resp.message, 'success');
+      abrirModalPlato(false);
+      e.target.reset();
+      await refrescar();
+    } catch (err) {
+      App.mostrarToast(err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  }
+
+  async function eliminarPlato(id, nombre) {
+    if (!confirm(`¿Eliminar el plato "${nombre}"?\n\nSe quitará del menú y de su receta. Esta acción no se puede deshacer.`)) return;
+    try {
+      const resp = await Api.eliminarPlato(id);
+      App.mostrarToast(resp.message, 'success');
+      delete state.seleccion[id];
+      await refrescar();
+    } catch (err) {
+      App.mostrarToast(err.message, 'error');
+    }
   }
 
   /* ---------- Registrar comanda ---------- */

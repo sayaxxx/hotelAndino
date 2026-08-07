@@ -970,6 +970,79 @@ app.get('/api/platos', requireAuth, (req, res) => {
   res.json({ platos: lista });
 });
 
+// Crear un nuevo plato con su receta (solo admin)
+app.post('/api/platos', requireAuth, requireAdmin, (req, res) => {
+  const { nombre, categoria, precio, ingredientes } = req.body || {};
+
+  if (!nombre || !String(nombre).trim()) {
+    return res.status(400).json({ error: 'Indique el nombre del plato.' });
+  }
+  if (!categoria || !String(categoria).trim()) {
+    return res.status(400).json({ error: 'Indique la categoría del plato.' });
+  }
+  const precioNum = parseFloat(precio);
+  if (isNaN(precioNum) || precioNum < 0) {
+    return res.status(400).json({ error: 'Precio inválido.' });
+  }
+  if (!Array.isArray(ingredientes) || ingredientes.length === 0) {
+    return res.status(400).json({ error: 'Agregue al menos un ingrediente a la receta.' });
+  }
+
+  const platos = readCsv('platos.csv');
+  if (platos.some((x) => x.nombre.toLowerCase() === String(nombre).trim().toLowerCase())) {
+    return res.status(400).json({ error: 'Ya existe un plato con ese nombre.' });
+  }
+
+  const productos = readCsv('productos.csv');
+  const receta = [];
+  for (const ing of ingredientes) {
+    const idProducto = String((ing && ing.id_producto) || '');
+    const prod = productos.find((x) => x.id === idProducto);
+    if (!prod) {
+      return res.status(400).json({ error: 'Un ingrediente de la receta no existe en el inventario.' });
+    }
+    const cantidad = parseFloat(ing && ing.cantidad);
+    if (isNaN(cantidad) || cantidad <= 0) {
+      return res.status(400).json({ error: `Cantidad inválida para el ingrediente ${prod.nombre}.` });
+    }
+    receta.push({ id_producto: idProducto, cantidad: String(redondear(cantidad)) });
+  }
+
+  const nuevo = {
+    id: String(nextId(platos, 'id')),
+    nombre: String(nombre).trim(),
+    categoria: String(categoria).trim(),
+    precio: String(redondear(precioNum)),
+  };
+  platos.push(nuevo);
+  writeCsv('platos.csv', platos);
+
+  const recetas = readCsv('plato_ingredientes.csv');
+  for (const r of receta) {
+    recetas.push({ id_plato: nuevo.id, id_producto: r.id_producto, cantidad: r.cantidad });
+  }
+  writeCsv('plato_ingredientes.csv', recetas);
+
+  res.status(201).json({ message: `Plato ${nuevo.nombre} agregado al menú.`, plato: stripInternal(nuevo) });
+});
+
+// Eliminar un plato del menú y su receta (solo admin)
+app.delete('/api/platos/:id', requireAuth, requireAdmin, (req, res) => {
+  const platos = readCsv('platos.csv');
+  const idx = platos.findIndex((p) => p.id === String(req.params.id));
+  if (idx === -1) {
+    return res.status(404).json({ error: 'Plato no encontrado.' });
+  }
+  const eliminado = platos[idx];
+  platos.splice(idx, 1);
+  writeCsv('platos.csv', platos);
+
+  const recetas = readCsv('plato_ingredientes.csv').filter((r) => r.id_plato !== String(req.params.id));
+  writeCsv('plato_ingredientes.csv', recetas);
+
+  res.json({ message: `Plato ${eliminado.nombre} eliminado del menú.` });
+});
+
 // Inventario
 app.get('/api/inventario', requireAuth, (req, res) => {
   const inventario = readCsv('productos.csv').map((p) => {
