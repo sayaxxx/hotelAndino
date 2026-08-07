@@ -351,40 +351,85 @@ app.post('/api/reservas', requireAuth, requireAdmin, (req, res) => {
     habitacion, fecha_checkin, fecha_checkout, comidas, rostro_base64,
   } = req.body || {};
 
-  if (!nombre || !documento || !habitacion || !fecha_checkin || !fecha_checkout) {
+  const nombreVal = String(nombre || '').trim();
+  const documentoVal = String(documento || '').trim();
+  const habitacionVal = String(habitacion || '').trim();
+  const telefonoVal = String(telefono || '').trim();
+  const emailVal = String(email || '').trim();
+
+  if (!nombreVal || !documentoVal || !habitacionVal || !fecha_checkin || !fecha_checkout) {
     return res.status(400).json({ error: 'Complete los campos obligatorios (nombre, documento, habitación y fechas).' });
   }
   if (!Array.isArray(comidas) || comidas.length === 0) {
     return res.status(400).json({ error: 'Seleccione al menos una comida del plan.' });
   }
-  if (fecha_checkin > fecha_checkout) {
-    return res.status(400).json({ error: 'El check-in no puede ser posterior al check-out.' });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fecha_checkin)) || !/^\d{4}-\d{2}-\d{2}$/.test(String(fecha_checkout))) {
+    return res.status(400).json({ error: 'Las fechas deben tener el formato AAAA-MM-DD.' });
+  }
+  if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?: [A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/.test(nombreVal)) {
+    return res.status(400).json({ error: 'El nombre solo puede contener letras y espacios (sin números ni caracteres especiales).' });
+  }
+  if (!/^\d+$/.test(documentoVal)) {
+    return res.status(400).json({ error: 'El documento solo puede contener números.' });
+  }
+  if (documentoVal.length < 4 || documentoVal.length > 15) {
+    return res.status(400).json({ error: 'El documento debe tener entre 4 y 15 dígitos.' });
+  }
+  if (!/^[A-Za-z0-9-]+$/.test(habitacionVal)) {
+    return res.status(400).json({ error: 'La habitación solo puede contener letras y números.' });
+  }
+  if (fecha_checkin < todayStr()) {
+    return res.status(400).json({ error: `El check-in no puede ser anterior a la fecha actual (${todayStr()}).` });
+  }
+  if (fecha_checkin >= fecha_checkout) {
+    return res.status(400).json({ error: 'El check-out debe ser posterior al check-in.' });
+  }
+  if (telefonoVal && !/^[\d\s()+.-]{7,}$/.test(telefonoVal)) {
+    return res.status(400).json({ error: 'El teléfono solo puede contener números y el prefijo +.' });
+  }
+  if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+    return res.status(400).json({ error: 'El correo electrónico no es válido.' });
   }
 
   // Buscar huésped existente por documento; si no existe, crearlo
   let huespedes = readCsv('huespedes.csv');
   let esNuevoHuesped = false;
-  let huesped = huespedes.find((h) => h.documento === String(documento).trim());
+  let huesped = huespedes.find((h) => h.documento === documentoVal);
   if (!huesped) {
     esNuevoHuesped = true;
     huesped = {
       id: String(nextId(huespedes, 'id')),
-      nombre: String(nombre).trim(),
-      documento: String(documento).trim(),
+      nombre: nombreVal,
+      documento: documentoVal,
       tipo_documento: (tipo_documento || 'CC').trim(),
-      telefono: String(telefono || '').trim(),
-      email: String(email || '').trim(),
+      telefono: telefonoVal,
+      email: emailVal,
     };
     huespedes.push(huesped);
     writeCsv('huespedes.csv', huespedes);
   }
 
+  // Disponibilidad de habitación: no se puede reservar una habitación que ya
+  // esté ocupada o reservada en un rango de fechas que se solape.
   const reservas = readCsv('reservas.csv');
+  const solapada = reservas.find(
+    (r) =>
+      r.habitacion === habitacionVal &&
+      r.estado === 'Activa' &&
+      String(fecha_checkin) < r.fecha_checkout &&
+      r.fecha_checkin < String(fecha_checkout)
+  );
+  if (solapada) {
+    return res.status(409).json({
+      error: `La habitación ${habitacionVal} ya está ocupada o reservada (Res. ${solapada.id_reserva}) en esas fechas.`,
+    });
+  }
+
   const id_reserva = String(nextId(reservas, 'id_reserva'));
   const nueva = {
     id_reserva,
     id_huesped: huesped.id,
-    habitacion: String(habitacion).trim(),
+    habitacion: habitacionVal,
     fecha_checkin,
     fecha_checkout,
     estado: 'Activa',

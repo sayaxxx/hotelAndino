@@ -49,6 +49,10 @@ const App = (() => {
     document.getElementById('btn-descartar').addEventListener('click', descartarRostro);
     document.getElementById('res-foto').addEventListener('change', cargarFoto);
 
+    // Fechas: el check-in no puede ser en el pasado y el check-out va después
+    document.getElementById('res-fecha-in').addEventListener('change', ajustarFechasReserva);
+    document.getElementById('res-fecha-out').addEventListener('change', ajustarFechasReserva);
+
     // Si la sesión expira, volver al login
     document.addEventListener('andino:noauth', () => mostrarLogin());
 
@@ -211,10 +215,27 @@ const App = (() => {
     if (!modal) return;
     modal.classList.toggle('hidden', !abrir);
     if (abrir) {
-      document.getElementById('res-fecha-in').value = hoyISO();
-      document.getElementById('res-fecha-out').value = hoyISO();
+      const hoy = hoyISO();
+      document.getElementById('res-fecha-in').value = hoy;
+      document.getElementById('res-fecha-out').value = hoy;
+      ajustarFechasReserva();
     } else {
       descartarRostro();
+    }
+  }
+
+  function ajustarFechasReserva() {
+    const inEl = document.getElementById('res-fecha-in');
+    const outEl = document.getElementById('res-fecha-out');
+    const hoy = hoyISO();
+    inEl.min = hoy;
+    const checkin = inEl.value;
+    if (checkin) {
+      const fecha = new Date(checkin + 'T00:00:00');
+      fecha.setDate(fecha.getDate() + 1);
+      const minOut = fecha.toISOString().slice(0, 10);
+      outEl.min = minOut;
+      if (!outEl.value || outEl.value <= checkin) outEl.value = minOut;
     }
   }
 

@@ -341,11 +341,14 @@
           <div class="form-grid">
             <div class="field">
               <label for="res-nombre">Nombre completo *</label>
-              <input id="res-nombre" type="text" placeholder="Nombre y apellido" required />
+              <input id="res-nombre" type="text" placeholder="Nombre y apellido"
+                pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+( [A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*"
+                title="Solo letras y espacios, sin números ni caracteres especiales." required />
             </div>
             <div class="field">
               <label for="res-documento">Documento *</label>
-              <input id="res-documento" type="text" placeholder="N° documento" required />
+              <input id="res-documento" type="text" placeholder="N° documento" inputmode="numeric"
+                pattern="\d{4,15}" title="Solo números, entre 4 y 15 dígitos." required />
             </div>
             <div class="field">
               <label for="res-tipo-doc">Tipo documento</label>
@@ -358,7 +361,8 @@
             </div>
             <div class="field">
               <label for="res-telefono">Teléfono</label>
-              <input id="res-telefono" type="text" placeholder="Opcional" />
+              <input id="res-telefono" type="tel" placeholder="Opcional"
+                pattern="[\d\s()+.-]{7,}" title="Solo números y prefijo +." />
             </div>
             <div class="field">
               <label for="res-email">Email</label>
@@ -372,7 +376,8 @@
           <div class="form-grid">
             <div class="field">
               <label for="res-habitacion">Habitación *</label>
-              <input id="res-habitacion" type="text" placeholder="Ej: 204" required />
+              <input id="res-habitacion" type="text" placeholder="Ej: 204"
+                pattern="[A-Za-z0-9-]+" title="Solo letras y números." required />
             </div>
             <div class="field">
               <label for="res-fecha-in">Check-in *</label>
