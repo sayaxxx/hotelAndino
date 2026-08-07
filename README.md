@@ -108,14 +108,50 @@ cd hotel-andino
 # 1) Dependencias de Node (servidor web)
 npm install
 
-# 2) Dependencias de Python (kiosco facial)
-pip install opencv-python requests
-
-# 3) Dependencias de Python (panel de reportes)
-pip install streamlit pandas matplotlib fpdf2
+# 2) Dependencias de Python (kiosco facial + panel de reportes)
+pip install -r requirements.txt
 ```
 
-> Si usas `requirements.txt` (opcional): `pip install -r requirements.txt`
+> `requirements.txt` incluye: `opencv-contrib-python`, `numpy`, `requests`, `streamlit`, `pandas`,
+> `matplotlib` y `fpdf2`. El reconocimiento facial (LBPH) requiere `opencv-contrib-python`
+> (**no** `opencv-python`, que no trae el módulo `cv2.face`).
+
+---
+
+## 🚀 Guía rápida: correr el sistema en otra PC
+
+Pasos para descargar y levantar el sistema en **cualquier computador** (Windows, macOS o Linux)
+sin configuración adicional:
+
+1. **Instala los requisitos** (una sola vez): [Node.js 18+](https://nodejs.org) y Python 3.10+
+   (el panel de reportes y el kiosco facial son opcionales; la app web solo necesita Node).
+2. **Descarga el proyecto** — clona con Git o descarga el ZIP (ver [Clonación y descarga](#-clonación-y-descarga))
+   y extrae la carpeta en cualquier ubicación.
+3. **Abre una terminal** en la carpeta del proyecto.
+4. **Instala las dependencias de Node**:
+   ```bash
+   npm install
+   ```
+5. **Instala las dependencias de Python** (solo si usarás reportes o el kiosco facial):
+   ```bash
+   pip install -r requirements.txt
+   ```
+6. **Arranca el servidor web**:
+   ```bash
+   npm start
+   ```
+   Debe imprimir `[Hotel Andino] Servidor listo en http://localhost:3000`.
+7. **Abre el navegador** en `http://localhost:3000` e inicia sesión con
+   `admin` / `admin123` (o `kiosco` / `kiosco123`).
+8. **Verifica que todo funcione**:
+   - El login carga y la app entra al Panel de Control.
+   - Reservas, Comandas, Inventario y Caja responden sin errores.
+   - En Windows, el panel de reportes abre con doble clic en `reportes\run_reportes.bat`
+     (o con `python -m streamlit run reportes/reportes.py`).
+
+> El sistema **no necesita configuración previa**: no hay base de datos externa ni claves, los
+> datos viven en `data/*.csv` y todas las rutas son relativas al proyecto, por lo que corre en
+> cualquier carpeta o máquina.
 
 ---
 
@@ -277,19 +313,35 @@ Todo se persiste como CSV en `data/`:
 
 ---
 
+## 🩺 Solución de problemas
+
+| Problema | Solución |
+|----------|----------|
+| `npm` no se reconoce | Instala Node.js 18+ y reinicia la terminal |
+| `python` no se reconoce en Windows | Usa `py` en vez de `python`, o marca **Add to PATH** al instalar Python |
+| `EADDRINUSE` al arrancar | El puerto 3000 está ocupado: usa otro con `set PORT=3001` (Windows) o `PORT=3001` (Linux/macOS) y ejecuta `npm start` |
+| `cv2.face` no existe | Instala `opencv-contrib-python` (no `opencv-python`) |
+| El panel de reportes no abre | Ejecuta `streamlit run reportes/reportes.py` (o el `.bat`); requiere `pip install -r requirements.txt` |
+| El botón "Abrir panel de reportes" no carga | Ese botón usa `localhost:8501`: abre el reporte en la máquina donde corre Streamlit, o usa `http://<IP-del-servidor>:8501` |
+| Otros dispositivos no cargan la página | El servidor debe escuchar en la red: entra con `http://<IP-del-servidor>:3000` y permite el puerto en el firewall/antivirus |
+| No hay rostros en el kiosco facial | Las fotos viven en `data/rostros/` y **no se comparten por privacidad**; se generan al registrar huéspedes con foto |
+
+---
+
 ## ⚠️ Consideraciones y seguridad
 
 - **Sesiones en memoria**: las sesiones se guardan en un `Map` de Node; al reiniciar el servidor
   todos los dispositivos deben volver a iniciar sesión.
 - **Contraseñas en texto plano** en `data/usuarios.csv`: cámbialas para producción.
-- **Datos personales**: si vas a publicar el repositorio, añade `data/rostros/` (fotos) y
-  `data/*.csv` (datos de huéspedes) a tu `.gitignore`.
 - **Horarios de comida** configurados en `server/server.js` (`VENTANAS_COMIDA`):
-  Desayuno 05:00–08:30, Almuerzo 12:00–15:00, Cena 17:30–23:59.
-- La cena está temporalmente habilitada hasta las 23:59 para pruebas.
+  Desayuno 05:00–08:30, Almuerzo 12:00–15:00, Cena 18:00–21:00.
 
 ---
 
 ## 📝 Licencia
 
 Fines Academicos
+
+## Autor:
+
+Arlhey Fabian Abadia Jaimes

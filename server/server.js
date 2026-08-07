@@ -89,8 +89,7 @@ const MEALS = ['Desayuno', 'Almuerzo', 'Cena'];
 const VENTANAS_COMIDA = [
   { servicio: 'Desayuno', inicio: '05:00', fin: '08:30', etiqueta: 'Desayuno (05:00 - 08:30)' },
   { servicio: 'Almuerzo', inicio: '12:00', fin: '15:00', etiqueta: 'Almuerzo (12:00 - 15:00)' },
-  // Cena temporalmente hasta las 23:59 para pruebas; luego se ajusta su horario definitivo.
-  { servicio: 'Cena', inicio: '17:30', fin: '23:59', etiqueta: 'Cena (17:30 - 23:59)' },
+  { servicio: 'Cena', inicio: '18:00', fin: '21:00', etiqueta: 'Cena (18:00 - 21:00)' },
 ];
 
 function stripInternal(obj) {

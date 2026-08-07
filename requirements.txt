@@ -1,0 +1,10 @@
+# Kiosco de cafetería (reconocimiento facial)
+opencv-contrib-python
+numpy
+requests
+
+# Panel de reportes (Streamlit)
+streamlit
+pandas
+matplotlib
+fpdf2

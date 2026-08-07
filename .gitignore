@@ -2,3 +2,13 @@ node_modules/
 *.log
 .DS_Store
 Thumbs.db
+
+# Artefactos de Python
+__pycache__/
+*.pyc
+
+# Logs de runtime del panel de reportes
+reportes/*.log
+
+# Fotos de rostros de huéspedes (datos personales; no publicar)
+data/rostros/
